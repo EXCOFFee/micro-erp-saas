@@ -1,0 +1,23 @@
+# Backend Render config
+# https://docs.render.com/blueprint-spec
+
+services:
+  # ── Backend (NestJS) ─────────────────────────────────────
+  - type: web
+    name: micro-erp-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: node dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false  # https://micro-erp-demo.vercel.app
+      - key: PORT
+        value: 10000

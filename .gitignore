@@ -1,0 +1,38 @@
+# Micro-ERP — .gitignore
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.production.local
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sw[po]
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test / Coverage
+coverage/
+*.lcov
+
+# Misc
+.turbo/
+*.tsbuildinfo
