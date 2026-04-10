@@ -1,4 +1,4 @@
-# 🏪 Micro-ERP SaaS
+# Micro-ERP SaaS
 
 Sistema de gestión de fiados (crédito informal) para pequeños comercios argentinos. Multi-tenant, con control de deudas, pagos, arqueo de caja y notificaciones por WhatsApp.
 
@@ -8,7 +8,7 @@ Sistema de gestión de fiados (crédito informal) para pequeños comercios argen
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
 
-## 🎯 Funcionalidades
+## Funcionalidades
 
 | Módulo | Descripción |
 |---|---|
@@ -20,7 +20,7 @@ Sistema de gestión de fiados (crédito informal) para pequeños comercios argen
 | **Dashboard** | KPIs, top 10 morosos, exportar CSV |
 | **Configuración** | Settings por tenant (alias MercadoPago, moneda, ticket) |
 
-## 🏗 Arquitectura
+## Arquitectura
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -31,13 +31,13 @@ Sistema de gestión de fiados (crédito informal) para pequeños comercios argen
 ```
 
 **Decisiones técnicas clave:**
-- 💰 **Integer-only cents** — Cero floats para montos ($50.00 = 5000 cents)
-- 🔒 **Pessimistic locking** — Transacciones ACID con `FOR UPDATE`
-- 🔑 **Idempotency keys** — Protección contra doble-click y timeout de Render
-- 🏢 **Multi-tenant** — Aislamiento total por `tenant_id` en cada query
-- 📜 **Inmutabilidad** — Las transacciones no se borran, se revierten
+-  **Integer-only cents** — Cero floats para montos ($50.00 = 5000 cents)
+-  **Pessimistic locking** — Transacciones ACID con `FOR UPDATE`
+-  **Idempotency keys** — Protección contra doble-click y timeout de Render
+-  **Multi-tenant** — Aislamiento total por `tenant_id` en cada query
+-  **Inmutabilidad** — Las transacciones no se borran, se revierten
 
-## 🚀 Levantar local
+##  Levantar local
 
 ### Requisitos
 - Node.js 20+
@@ -66,7 +66,7 @@ cd backend
 pnpm run test            # 22 unit tests
 ```
 
-## 📦 Deploy
+##  Deploy
 
 ### Backend → Render
 1. Conectar el repo en [Render](https://render.com)
@@ -94,7 +94,7 @@ pnpm run test            # 22 unit tests
 | CustomersService | 7 | CRUD, bloqueo, fusión, validaciones |
 | NotificationsService | 5 | Magic links, JWT, resumen público |
 
-## 📁 Estructura
+##  Estructura
 
 ```
 Micro-ERP/
