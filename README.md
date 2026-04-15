@@ -86,7 +86,7 @@ pnpm run test            # 22 unit tests
 2. Copiar el Connection String → `DATABASE_URL`
 3. Las tablas se crean automáticamente con `synchronize: true` (solo dev)
 
-## 🧪 Cobertura de tests
+## Cobertura de tests
 
 | Service | Tests | Casos cubiertos |
 |---|---|---|
@@ -121,6 +121,6 @@ Micro-ERP/
 └── .env.example            # Template de variables
 ```
 
-## 📄 Licencia
+## Licencia
 
 MIT — Proyecto de portfolio.
