@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
@@ -23,6 +24,12 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  /**
+   * Seguridad Global: Helmet
+   * Oculta cabeceras de servidor y añade restricciones para evitar distintos tipos de exploits HTTP.
+   */
+  app.use(helmet());
 
   /**
    * CORS — Permite que el frontend (Vercel) haga peticiones al backend (Render).
@@ -63,6 +70,16 @@ async function bootstrap() {
    */
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const expressApp = app.getHttpAdapter().getInstance();
+
+  /**
+   * Throttler / Proxies en Producción:
+   * Al estar desplegados en la nube (Render/Vercel/etc.), estamos tras un proxy.
+   * Trust Proxy permite que express reconozca la IP real del usuario en lugar de 
+   * la IP del load balancer, fundamental para que el Rate Limiting discrimine bien.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  expressApp.set('trust proxy', 1);
+
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   expressApp.get(
     '/health',

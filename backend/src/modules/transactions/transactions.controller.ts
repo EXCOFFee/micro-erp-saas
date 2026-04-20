@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   ParseUUIDPipe,
   Req,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { ReverseTransactionDto } from './dto/reverse-transaction.dto';
 import { ForgiveDebtDto } from './dto/forgive-debt.dto';
 import { InflationAdjustmentDto } from './dto/inflation-adjustment.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 
@@ -105,10 +107,12 @@ export class TransactionsController {
   findByCustomer(
     @Req() req: { user: { tenant_id: string } },
     @Param('customerId', ParseUUIDPipe) customerId: string,
+    @Query() pagination: PaginationQueryDto,
   ) {
     return this.transactionsService.findByCustomer(
       req.user.tenant_id,
       customerId,
+      pagination,
     );
   }
 

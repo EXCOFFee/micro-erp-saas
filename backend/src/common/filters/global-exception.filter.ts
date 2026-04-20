@@ -31,6 +31,25 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
+    /**
+     * Structured Logging (Enterprise: CloudWatch/Datadog)
+     * Generamos un payload JSON que incluye el tenantId para trazabilidad SaaS multi-tenant.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    const tenantId = (request as any).user?.tenantId || null;
+
+    const logPayload = {
+      timestamp: new Date().toISOString(),
+      statusCode: status,
+      path: request.url,
+      method: request.method,
+      error: exception instanceof Error ? exception.stack || exception.message : String(exception),
+      tenantId,
+    };
+
+    // Imprimir el error en formato JSON mediante el logger de NestJS
+    this.logger.error(JSON.stringify(logPayload));
+
     // Si es un HttpException estándar (ej: NotFound, BadRequest de class-validator)
     // Extraemos su respuesta nativa para no romper el contrato del frontend.
     if (isHttpException) {
@@ -47,12 +66,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       });
       return;
     }
-
-    // Si NO es un HttpException, es un error de código no capturado (Bug, BD caída, etc).
-    // Logueamos el error real internamente para debug.
-    this.logger.error(
-      `Unhandled Exception at ${request.url}: ${exception instanceof Error ? exception.stack : String(exception)}`,
-    );
 
     // Retornamos un mensaje genérico al frontend (Regla de Seguridad)
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

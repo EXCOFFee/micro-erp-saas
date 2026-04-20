@@ -586,18 +586,26 @@ export class TransactionsService {
   // ─── CONSULTAS ───────────────────────────────────────────────────────────
 
   /**
-   * Historial de transacciones de un cliente (para el detalle del deudor).
+   * Historial paginado de transacciones de un cliente (para el detalle del deudor).
    * Aislado por tenant_id, ordenado por fecha descendente.
+   * Retorna estructura paginada para evitar OOM en clientes con alto volumen transaccional.
    */
   async findByCustomer(
     tenantId: string,
     customerId: string,
-  ): Promise<Transaction[]> {
-    return this.dataSource.getRepository(Transaction).find({
+    pagination: { limit: number; offset: number } = { limit: 20, offset: 0 },
+  ): Promise<{ data: Transaction[]; total: number; limit: number; offset: number }> {
+    const repo = this.dataSource.getRepository(Transaction);
+
+    const [data, total] = await repo.findAndCount({
       where: { tenant_id: tenantId, customer_id: customerId },
       relations: ['user'],
       order: { created_at: 'DESC' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
+
+    return { data, total, limit: pagination.limit, offset: pagination.offset };
   }
 
   // ─── HELPERS PRIVADOS ────────────────────────────────────────────────────

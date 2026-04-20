@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -44,6 +45,15 @@ import { RolesGuard } from './common/guards/roles.guard';
       envFilePath: '.env',
     }),
 
+    /**
+     * Rate Limiting Global
+     * Previene ataques DDoS bloqueando un máximo de 100 peticiones cada 60000ms.
+     */
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
+
     /** Conexión PostgreSQL con pool conservador para Supabase Free Tier */
     DatabaseModule,
 
@@ -67,6 +77,14 @@ import { RolesGuard } from './common/guards/roles.guard';
   ],
   controllers: [],
   providers: [
+    /**
+     * Guard global de Rate Limiting (Throttler).
+     * Se ejecuta antes que los demás mitigando fuerza bruta.
+     */
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     /**
      * Guard global de autenticación JWT.
      * Todos los endpoints requieren JWT válido por defecto.

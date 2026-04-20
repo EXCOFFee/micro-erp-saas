@@ -17,7 +17,7 @@ void Customer;
  * Unit tests para TransactionsService — Motor financiero.
  *
  * Estrategia:
- * - Mock completo del DataSource y QueryRunner
+ * - Mock completo del DataSource y QueryRunner (incluyendo query())
  * - Cada test verifica un flujo ACID específico
  * - Se valida la lógica de negocio SIN tocar la BD real
  */
@@ -37,13 +37,14 @@ describe('TransactionsService', () => {
   };
 
   beforeEach(async () => {
-    // Mock del QueryRunner (ACID)
+    // Mock del QueryRunner (ACID) — incluye query() para SET lock_timeout
     mockQueryRunner = {
-      connect: jest.fn(),
-      startTransaction: jest.fn(),
-      commitTransaction: jest.fn(),
-      rollbackTransaction: jest.fn(),
-      release: jest.fn(),
+      connect: jest.fn().mockResolvedValue(undefined),
+      startTransaction: jest.fn().mockResolvedValue(undefined),
+      commitTransaction: jest.fn().mockResolvedValue(undefined),
+      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockResolvedValue(undefined),
       manager: {
         findOne: jest.fn(),
         find: jest.fn(),
@@ -63,6 +64,7 @@ describe('TransactionsService', () => {
       getRepository: jest.fn().mockReturnValue({
         find: jest.fn().mockResolvedValue([]),
         findOne: jest.fn(),
+        findAndCount: jest.fn().mockResolvedValue([[], 0]),
       } as Partial<Repository<Transaction>>),
     };
 
@@ -217,6 +219,57 @@ describe('TransactionsService', () => {
           idempotency_key: 'rev-1',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ─── CONSULTA PAGINADA ──────────────────────────────────────────────
+
+  describe('findByCustomer', () => {
+    it('debe retornar resultado paginado con total', async () => {
+      const mockTx = [{ id: 'tx-1', amount_cents: 5000 }];
+
+      // Mock del repo con findAndCount para paginación
+      (mockDataSource.getRepository as jest.Mock).mockReturnValue({
+        findAndCount: jest.fn().mockResolvedValue([mockTx, 1]),
+      });
+
+      const result = await service.findByCustomer(
+        'tenant-1',
+        'customer-1',
+        { limit: 10, offset: 0 },
+      );
+
+      expect(result).toEqual({
+        data: mockTx,
+        total: 1,
+        limit: 10,
+        offset: 0,
+      });
+    });
+
+    it('debe usar valores por defecto si no se pasan parámetros', async () => {
+      const findAndCountMock = jest.fn().mockResolvedValue([[], 0]);
+
+      (mockDataSource.getRepository as jest.Mock).mockReturnValue({
+        findAndCount: findAndCountMock,
+      });
+
+      const result = await service.findByCustomer('tenant-1', 'customer-1');
+
+      expect(result).toEqual({
+        data: [],
+        total: 0,
+        limit: 20,
+        offset: 0,
+      });
+
+      // Verificar que se pasaron take/skip al repo
+      expect(findAndCountMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 20,
+          skip: 0,
+        }),
+      );
     });
   });
 
