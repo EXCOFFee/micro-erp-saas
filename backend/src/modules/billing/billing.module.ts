@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BillingController } from './billing.controller';
+import { BillingService } from './billing.service';
+
 import { BillingEvent } from './entities/billing-event.entity';
 import { Tenant } from '../tenants/entities/tenant.entity';
 
@@ -17,8 +20,8 @@ import { Tenant } from '../tenants/entities/tenant.entity';
  */
 @Module({
   imports: [TypeOrmModule.forFeature([BillingEvent, Tenant])],
-  controllers: [],   // Se agregará BillingController en Batch 2
-  providers: [],     // Se agregará BillingService en Batch 2
+  controllers: [BillingController],
+  providers: [BillingService],
   exports: [TypeOrmModule],
 })
 export class BillingModule {}

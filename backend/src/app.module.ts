@@ -15,6 +15,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { CronModule } from './modules/cron/cron.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { SubscriptionGuard } from './common/guards/subscription.guard';
+import { AppController } from './app.controller';
 
 /**
  * AppModule — Módulo raíz del Micro ERP SaaS.
@@ -75,7 +77,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     // Importa ScheduleModule.forRoot() internamente para activar el motor de cron.
     CronModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [
     /**
      * Guard global de Rate Limiting (Throttler).
@@ -102,6 +104,16 @@ import { RolesGuard } from './common/guards/roles.guard';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    /**
+     * Guard global de Suscripción (SaaS).
+     * Se ejecuta DESPUÉS de RolesGuard.
+     * Lee del JWT en memoria (Zero-Query) el estado de la suscripción
+     * y bloquea a los morosos.
+     */
+    {
+      provide: APP_GUARD,
+      useClass: SubscriptionGuard,
     },
   ],
 })

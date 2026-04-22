@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { Customer } from '../customers/entities/customer.entity';
 import { Tenant } from '../tenants/entities/tenant.entity';
 import { OverdueCronService } from './overdue-cron.service';
+import { SaasCronService } from './saas-cron.service';
 import { CronController } from './cron.controller';
 import { AuditModule } from '../audit/audit.module';
 
@@ -50,7 +51,7 @@ import { AuditModule } from '../audit/audit.module';
     AuditModule,
   ],
   controllers: [CronController],
-  providers: [OverdueCronService],
+  providers: [OverdueCronService, SaasCronService],
   // No exportamos nada: este módulo es un consumidor, no un proveedor de servicios.
 })
 export class CronModule {}

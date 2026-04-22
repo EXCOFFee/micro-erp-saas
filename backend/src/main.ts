@@ -80,14 +80,6 @@ async function bootstrap() {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   expressApp.set('trust proxy', 1);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  expressApp.get(
-    '/health',
-    (_req: unknown, res: { json: (body: unknown) => void }) => {
-      res.json({ status: 'ok', timestamp: new Date().toISOString() });
-    },
-  );
-
   /**
    * Puerto dinámico para Render.
    * Render asigna el puerto via process.env.PORT.
