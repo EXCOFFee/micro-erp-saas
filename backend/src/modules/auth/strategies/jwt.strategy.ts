@@ -101,11 +101,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
      * Retornamos el objeto que se inyecta como req.user en los controllers.
      * Incluimos los campos mínimos necesarios para que los services
      * puedan filtrar por tenant_id y verificar roles.
+     *
+     * SDD — SaaS Core:
+     * sub_status y sub_expires_at se pasan del JWT al req.user para que
+     * el SubscriptionGuard los lea en-memoria (Zero-Query pattern).
      */
     return {
       id: user.id,
       tenant_id: user.tenant_id,
       role: user.role,
+      sub_status: payload.sub_status,
+      sub_expires_at: payload.sub_expires_at,
     };
   }
 }

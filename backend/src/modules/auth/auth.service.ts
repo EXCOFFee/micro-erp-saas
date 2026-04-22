@@ -164,30 +164,47 @@ export class AuthService {
     }
 
     /**
-     * Verificación del status del Tenant (CU-SAAS-02 — Tenant Suspendido).
-     * Si el comercio no pagó su suscripción (CU-SAAS-04), el Cron Job
-     * cambió su status a SUSPENDED. El login falla con 403 y un mensaje
-     * ESPECÍFICO de facturación (diferente al 401 de credenciales).
+     * Verificación del status del Tenant (CU-SAAS-02 + SDD SaaS Core).
+     *
+     * Estados que PERMITEN login:
+     * - TRIAL: 14 días gratis post-onboarding.
+     * - ACTIVE: Suscripción al día.
+     * - PAST_DUE: Vencida pero en gracia de 3 días (el cajero puede
+     *   operar, el frontend muestra banner rojo).
+     *
+     * Estados que BLOQUEAN login:
+     * - SUSPENDED: Hard lock tras 3 días de mora → 403.
+     * - CANCELLED: Baja definitiva → 403.
      */
-    if (user.tenant.status !== TenantStatus.ACTIVE) {
+    if (
+      user.tenant.status === TenantStatus.SUSPENDED ||
+      user.tenant.status === TenantStatus.CANCELLED
+    ) {
       throw new ForbiddenException(
         'Comercio suspendido. Contacte al soporte para resolver el problema de facturación',
       );
     }
 
     /**
-     * Payload del JWT (CU-SAAS-02 — Directiva Técnica):
-     * Contiene estrictamente: sub (user_id), tenant_id, role, token_version.
+     * Payload del JWT (CU-SAAS-02 + SDD SaaS Core):
      *
-     * - tenant_id: Fuente de verdad inmutable para filtrar queries por tenant.
-     * - token_version: Se valida en cada request contra la BD (Kill Switch).
-     * - role: Se usa por el RolesGuard para verificar permisos.
+     * Campos base: sub, tenant_id, role, token_version.
+     * Campos SaaS (Zero-Query): sub_status, sub_expires_at.
+     *
+     * El SubscriptionGuard lee sub_status y sub_expires_at directamente
+     * del JWT decodificado, sin consultar la BD en cada request.
      */
+    const subscriptionExpiresAt = user.tenant.subscription_expires_at
+      ? Math.floor(user.tenant.subscription_expires_at.getTime() / 1000)
+      : 0;
+
     const payload: JwtPayload = {
       sub: user.id,
       tenant_id: user.tenant_id,
       role: user.role,
       token_version: user.token_version,
+      sub_status: user.tenant.status,
+      sub_expires_at: subscriptionExpiresAt,
     };
 
     const accessToken = this.jwtService.sign(payload);

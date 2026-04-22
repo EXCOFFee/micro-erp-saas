@@ -52,16 +52,30 @@ export class Tenant {
 
   /**
    * Estado del tenant en el ciclo de vida SaaS.
-   * - ACTIVE: Puede operar normalmente.
-   * - SUSPENDED: Login bloqueado (403 Forbidden en CU-SAAS-02).
+   * - TRIAL: 14 días gratis post-onboarding (default).
+   * - ACTIVE: Suscripción al día.
+   * - PAST_DUE: Vencida, 3 días de gracia (banner rojo).
+   * - SUSPENDED: Hard lock (403/402 en endpoints operativos).
    * - CANCELLED: Baja definitiva.
    */
   @Column({
     type: 'enum',
     enum: TenantStatus,
-    default: TenantStatus.ACTIVE,
+    default: TenantStatus.TRIAL,
   })
   status: TenantStatus;
+
+  /**
+   * ID de suscripción de MercadoPago (SDD — SaaS Core).
+   *
+   * Se asigna cuando el comercio vincula su cuenta de MercadoPago
+   * con el sistema de billing. El BillingService lo usa para
+   * identificar qué tenant corresponde a un webhook de pago.
+   *
+   * NULL si el comercio aún no vinculó MercadoPago (ej: en TRIAL).
+   */
+  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
+  mp_subscription_id: string | null;
 
   /**
    * Configuraciones regionales y de personalización del comercio (CU-SAAS-06).
