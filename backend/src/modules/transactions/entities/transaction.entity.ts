@@ -11,6 +11,7 @@ import { Tenant } from '../../tenants/entities/tenant.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { User } from '../../users/entities/user.entity';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
+import { PaymentMethod } from '../../../common/enums/payment-method.enum';
 
 /**
  * Entidad Transaction — Registro inmutable de movimientos financieros.
@@ -112,6 +113,38 @@ export class Transaction {
    */
   @Column({ type: 'text', nullable: true })
   description: string | null;
+
+  /**
+   * Método de pago utilizado (spec_expansion_v2 — Fase 1).
+   *
+   * Solo aplica a transacciones de tipo PAYMENT:
+   * - CASH: Efectivo. Se contabiliza en el arqueo de caja (CU-CAJ-01).
+   * - TRANSFER: Transferencia/MercadoPago. NO suma al arqueo.
+   *
+   * Nullable para compatibilidad con transacciones históricas y tipos
+   * que no son PAYMENT (DEBT, REVERSAL, FORGIVENESS, INFLATION_ADJUSTMENT).
+   */
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
+    nullable: true,
+    default: null,
+  })
+  payment_method: PaymentMethod | null;
+
+  /**
+   * Agrupador de pagos mixtos (Efectivo + Transferencia).
+   *
+   * Cuando un cliente paga $10.000 en efectivo y $5.000 por transferencia,
+   * el servicio genera DOS filas Transaction con el mismo `reference_group_id`.
+   * Esto mantiene la entidad atómica (KISS) y permite:
+   * - Sumar solo CASH en el arqueo de caja.
+   * - Reconstruir el pago completo agrupando por este ID.
+   *
+   * NULL si el pago fue simple (un solo método).
+   */
+  @Column({ type: 'uuid', nullable: true, default: null })
+  reference_group_id: string | null;
 
   // ─── IDEMPOTENCIA Y SEGURIDAD ──────────────────────────────────────────
 

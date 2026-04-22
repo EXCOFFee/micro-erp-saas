@@ -6,11 +6,14 @@ import {
   UnprocessableEntityException,
   ConflictException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { DataSource, QueryRunner } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { TransactionType } from '../../common/enums/transaction-type.enum';
+import { PaymentMethod } from '../../common/enums/payment-method.enum';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CreatePaymentDto, CreateMixedPaymentDto } from './dto/create-payment.dto';
 import { ReverseTransactionDto } from './dto/reverse-transaction.dto';
 import { ForgiveDebtDto } from './dto/forgive-debt.dto';
 import { InflationAdjustmentDto } from './dto/inflation-adjustment.dto';
@@ -166,11 +169,14 @@ export class TransactionsService {
    *
    * NOTA: A diferencia de DEBT, un cliente BLOQUEADO SÍ puede hacer pagos.
    * Queremos recuperar la plata, solo cortamos el crédito nuevo (CU-CLI-03).
+   *
+   * payment_method (Fase 1): CASH (default) o TRANSFER.
+   * Solo CASH se contabiliza en el arqueo de caja (CU-CAJ-01).
    */
   async registerPayment(
     tenantId: string,
     userId: string,
-    dto: CreateTransactionDto,
+    dto: CreatePaymentDto,
   ): Promise<Transaction> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -217,6 +223,8 @@ export class TransactionsService {
         );
       }
 
+      const paymentMethod = dto.payment_method ?? PaymentMethod.CASH;
+
       const transaction = queryRunner.manager.create(Transaction, {
         tenant_id: tenantId,
         customer_id: dto.customer_id,
@@ -225,6 +233,7 @@ export class TransactionsService {
         amount_cents: effectiveAmount,
         description: dto.description ?? null,
         idempotency_key: dto.idempotency_key,
+        payment_method: paymentMethod,
       });
       await queryRunner.manager.save(transaction);
 
@@ -235,7 +244,7 @@ export class TransactionsService {
       await queryRunner.commitTransaction();
 
       this.logger.log(
-        `[PAYMENT] OK — Customer: ${dto.customer_id}, cobrado: ${effectiveAmount}, ` +
+        `[PAYMENT] OK — Customer: ${dto.customer_id}, cobrado: ${effectiveAmount} (${paymentMethod}), ` +
         `balance: ${balanceBefore} → ${customer.balance_cents}, key: ${dto.idempotency_key} — User: ${userId}`,
       );
 
@@ -244,6 +253,147 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[PAYMENT] ROLLBACK — Customer: ${dto.customer_id}, monto: ${dto.amount_cents}, ` +
+        `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // ─── PAGO MIXTO (EFECTIVO + TRANSFERENCIA) ────────────────────────────────
+
+  /**
+   * Registra un pago MIXTO: dos filas Transaction (CASH + TRANSFER)
+   * vinculadas por el mismo `reference_group_id` (spec_expansion_v2 — Fase 1).
+   *
+   * Decisión arquitectónica del usuario:
+   * NO ensuciar la entidad con columnas de desglose. Mantener atómica.
+   * Un pago mixto = dos filas independientes agrupables por reference_group_id.
+   *
+   * Validación ACID:
+   * - cash_amount_cents + transfer_amount_cents == total_amount_cents
+   * - Ambos montos > 0 (si uno es 0, usar registerPayment simple)
+   * - Si total > deuda, se ajusta proporcionalmente
+   * - Las dos filas se insertan en la misma transacción de BD
+   */
+  async registerMixedPayment(
+    tenantId: string,
+    userId: string,
+    dto: CreateMixedPaymentDto,
+  ): Promise<{ cash: Transaction; transfer: Transaction }> {
+    // Validación aritmética antes de abrir transacción
+    if (dto.cash_amount_cents + dto.transfer_amount_cents !== dto.total_amount_cents) {
+      throw new UnprocessableEntityException(
+        `La suma de efectivo (${dto.cash_amount_cents}) + transferencia (${dto.transfer_amount_cents}) ` +
+        `no coincide con el total (${dto.total_amount_cents})`,
+      );
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.query(`SET lock_timeout = ${this.LOCK_TIMEOUT_MS}`);
+
+      // Idempotencia: si la key ya existe, retornar sin duplicar
+      const existing = await this.findByIdempotencyKey(
+        queryRunner,
+        tenantId,
+        dto.idempotency_key,
+      );
+      if (existing) {
+        this.logger.log(
+          `[MIXED-PAYMENT] Idempotencia: key ${dto.idempotency_key} ya procesada — User: ${userId}`,
+        );
+        await queryRunner.commitTransaction();
+        // Buscar la segunda fila del grupo para retornar ambas
+        const groupTxs = existing.reference_group_id
+          ? await queryRunner.manager.find(Transaction, {
+              where: { reference_group_id: existing.reference_group_id },
+            })
+          : [existing];
+        const cashTx = groupTxs.find(t => t.payment_method === PaymentMethod.CASH) ?? existing;
+        const transferTx = groupTxs.find(t => t.payment_method === PaymentMethod.TRANSFER) ?? existing;
+        return { cash: cashTx, transfer: transferTx };
+      }
+
+      // Lock pessimista del Customer
+      const customer = await this.lockCustomer(
+        queryRunner,
+        tenantId,
+        dto.customer_id,
+      );
+
+      if (customer.balance_cents <= 0) {
+        throw new UnprocessableEntityException(
+          'El cliente no tiene deuda pendiente',
+        );
+      }
+
+      const balanceBefore = customer.balance_cents;
+
+      // Ajustar si el total supera la deuda — prorratear proporcionalmente
+      let cashEffective = dto.cash_amount_cents;
+      let transferEffective = dto.transfer_amount_cents;
+      const totalEffective = Math.min(dto.total_amount_cents, customer.balance_cents);
+
+      if (totalEffective < dto.total_amount_cents) {
+        const ratio = totalEffective / dto.total_amount_cents;
+        cashEffective = Math.round(dto.cash_amount_cents * ratio);
+        transferEffective = totalEffective - cashEffective; // Evitar error de redondeo
+      }
+
+      const groupId = randomUUID();
+
+      // Fila 1: Pago en EFECTIVO
+      const cashTx = queryRunner.manager.create(Transaction, {
+        tenant_id: tenantId,
+        customer_id: dto.customer_id,
+        user_id: userId,
+        type: TransactionType.PAYMENT,
+        amount_cents: cashEffective,
+        description: dto.description ?? 'Pago mixto — efectivo',
+        idempotency_key: dto.idempotency_key,
+        payment_method: PaymentMethod.CASH,
+        reference_group_id: groupId,
+      });
+      await queryRunner.manager.save(cashTx);
+
+      // Fila 2: Pago por TRANSFERENCIA (nueva idempotency_key derivada)
+      const transferTx = queryRunner.manager.create(Transaction, {
+        tenant_id: tenantId,
+        customer_id: dto.customer_id,
+        user_id: userId,
+        type: TransactionType.PAYMENT,
+        amount_cents: transferEffective,
+        description: dto.description ?? 'Pago mixto — transferencia',
+        idempotency_key: randomUUID(), // Key única para la segunda fila
+        payment_method: PaymentMethod.TRANSFER,
+        reference_group_id: groupId,
+      });
+      await queryRunner.manager.save(transferTx);
+
+      // Restar del balance (monto total efectivo)
+      customer.balance_cents -= (cashEffective + transferEffective);
+      if (customer.balance_cents < 0) customer.balance_cents = 0;
+      await queryRunner.manager.save(customer);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `[MIXED-PAYMENT] OK — Customer: ${dto.customer_id}, ` +
+        `cash: ${cashEffective}, transfer: ${transferEffective}, ` +
+        `balance: ${balanceBefore} → ${customer.balance_cents}, ` +
+        `group: ${groupId} — User: ${userId}`,
+      );
+
+      return { cash: cashTx, transfer: transferTx };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `[MIXED-PAYMENT] ROLLBACK — Customer: ${dto.customer_id}, ` +
         `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
       );
       throw error;

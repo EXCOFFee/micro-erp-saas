@@ -159,6 +159,11 @@ export class OverdueCronService {
     // según la configuración de cada tenant.
     void this.processAutoBlocks();
 
+    // ── AUTO-BLOQUEO POR LÍMITE DE CRÉDITO (spec_expansion_v2 — Fase 2) ──────
+    // Tercera fase: bloquear clientes con auto_block_on_limit = true
+    // cuyo balance_cents >= credit_limit_cents.
+    void this.processAutoBlockOnLimit();
+
     return { processed: overdueIds.length };
   }
 
@@ -258,6 +263,42 @@ export class OverdueCronService {
           `[CRON-MORA] Error insertando audit log para Customer ${customer.id}: ${String(error)}`,
         );
       }
+    }
+  }
+
+  /**
+   * Auto-bloquea clientes con auto_block_on_limit = true cuyo balance
+   * alcanzó o excedió su límite de crédito (spec_expansion_v2 — Fase 2).
+   *
+   * QUÉ: Busca clientes donde:
+   *   - auto_block_on_limit = true
+   *   - is_active = true (no están ya bloqueados)
+   *   - balance_cents >= credit_limit_cents
+   *   - credit_limit_cents > 0 (sin límite = sin auto-bloqueo)
+   *
+   * CÓMO: Un solo UPDATE batch con condición compuesta en PostgreSQL.
+   * POR QUÉ: El patrón fire-and-forget permite que la mora se marque primero
+   *           y el auto-bloqueo por límite ocurra sin bloquear la respuesta.
+   */
+  private async processAutoBlockOnLimit(): Promise<void> {
+    try {
+      const result = await this.customerRepository
+        .createQueryBuilder()
+        .update(Customer)
+        .set({ is_active: false })
+        .where('auto_block_on_limit = true')
+        .andWhere('is_active = true')
+        .andWhere('credit_limit_cents > 0')
+        .andWhere('balance_cents >= credit_limit_cents')
+        .execute();
+
+      if (result.affected && result.affected > 0) {
+        this.logger.warn(
+          `[CRON-AUTOBLOCK-LIMIT] ${result.affected} clientes auto-bloqueados por exceder límite de crédito`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`[CRON-AUTOBLOCK-LIMIT] Error: ${String(error)}`);
     }
   }
 }

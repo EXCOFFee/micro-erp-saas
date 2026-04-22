@@ -12,15 +12,25 @@ import { User } from '../../users/entities/user.entity';
 import { CashRegisterStatus } from '../../../common/enums/cash-register-status.enum';
 
 /**
- * Entidad CashRegisterLog — Registro de cierres de caja (CU-CAJ-01/02).
+ * Entidad CashRegisterLog — Registro de turnos de caja (CU-CAJ-01/02).
  *
- * Cada fila representa un turno cerrado por un cajero.
- * Al cerrar, el backend calcula cuánto DEBERÍA haber en caja
- * (sumando PAYMENTs del turno), el cajero informa cuánto HAY REALMENTE,
- * y el sistema registra la diferencia (faltante/sobrante).
+ * MODELO DE TURNOS EXPLÍCITOS (spec_expansion_v2 — Fase 1):
+ * A diferencia del modelo anterior (turnos implícitos calculados desde
+ * el último cierre), ahora cada turno tiene un ciclo de vida explícito:
  *
- * Las transacciones PAYMENT de ese turno quedan "congeladas" al asociar
- * su `cash_register_log_id` a este cierre (CU-CAJ-02 Directiva Técnica).
+ *   OPEN → CLOSED_OK | CLOSED_WITH_DISCREPANCY
+ *
+ * Flujo:
+ * 1. El cajero llama POST /cash-register/open → se crea un registro OPEN
+ *    con opening_cash_cents y se bloquea la apertura de otro turno
+ *    (via Tenant.active_cash_shift_id + Pessimistic Lock).
+ * 2. Durante el turno, las transacciones PAYMENT se asocian a este turno.
+ * 3. Al cerrar POST /cash-register/close → se calcula expected_cash,
+ *    se registra actual_cash y discrepancy, y se pasa a CLOSED_*.
+ *
+ * RESTRICCIÓN DE SIMULTANEIDAD:
+ * Solo UN turno OPEN a la vez por tenant (un solo mostrador).
+ * Controlado por Tenant.active_cash_shift_id (Pessimistic Lock sobre Tenant).
  *
  * Regla Multi-Tenant (Regla de Oro II):
  * Toda query filtra por tenant_id.
@@ -28,6 +38,7 @@ import { CashRegisterStatus } from '../../../common/enums/cash-register-status.e
 @Entity('cash_register_logs')
 @Index(['tenant_id'])
 @Index(['tenant_id', 'user_id'])
+@Index(['tenant_id', 'status']) // Para buscar turno OPEN rápidamente
 export class CashRegisterLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -40,7 +51,7 @@ export class CashRegisterLog {
   tenant: Tenant;
 
   /**
-   * Cajero que realizó el cierre de turno
+   * Cajero que abrió/cerró el turno.
    */
   @Column({ type: 'uuid' })
   user_id: string;
@@ -50,44 +61,53 @@ export class CashRegisterLog {
   user: User;
 
   /**
-   * Inicio del turno: timestamp del último cierre de este cajero
-   * o la fecha de creación del usuario si nunca cerró.
+   * Momento exacto de apertura del turno.
+   * Se registra al crear el turno (POST /cash-register/open).
    */
   @Column({ type: 'timestamptz' })
   opened_at: Date;
 
-  /** Momento exacto del cierre de turno */
-  @Column({ type: 'timestamptz' })
-  closed_at: Date;
+  /**
+   * Momento exacto del cierre de turno.
+   * NULL mientras el turno está OPEN.
+   */
+  @Column({ type: 'timestamptz', nullable: true, default: null })
+  closed_at: Date | null;
 
   /**
    * Fondo inicial en gaveta al abrir el turno, EN CENTAVOS (Regla de Oro III).
    * Ejemplo: $3.000 fondo = 300000 centavos.
-   * Nullable/default 0 para compatibilidad con cierres registrados antes de este campo.
+   * Registrado al abrir turno. Inmutable después.
    */
-  @Column({ type: 'int', default: 0, nullable: true })
+  @Column({ type: 'int', default: 0 })
   opening_cash_cents: number;
 
   /**
-   * Lo que el sistema dice que cobró el cajero, EN CENTAVOS (Regla de Oro III).
-   * Calculado como SUM(amount_cents) de PAYMENTs del turno.
+   * Lo que el sistema calcula que DEBERÍA haber en caja, EN CENTAVOS.
+   * Fórmula: opening_cash_cents + SUM(amount_cents WHERE payment_method = 'CASH').
+   *
+   * NULL mientras el turno está OPEN (se calcula al cerrar).
    */
-  @Column({ type: 'int' })
-  expected_cash_cents: number;
+  @Column({ type: 'int', nullable: true, default: null })
+  expected_cash_cents: number | null;
 
   /**
    * Lo que el cajero reporta que tiene, EN CENTAVOS.
    * Ingresado manualmente por el cajero al cerrar turno.
+   *
+   * NULL mientras el turno está OPEN.
    */
-  @Column({ type: 'int' })
-  actual_cash_cents: number;
+  @Column({ type: 'int', nullable: true, default: null })
+  actual_cash_cents: number | null;
 
   /**
    * Diferencia = actual - expected.
    * Positivo = sobrante, Negativo = faltante.
+   *
+   * NULL mientras el turno está OPEN.
    */
-  @Column({ type: 'int' })
-  discrepancy_cents: number;
+  @Column({ type: 'int', nullable: true, default: null })
+  discrepancy_cents: number | null;
 
   /**
    * Nota obligatoria si hay descuadre (CU-CAJ-02).
@@ -97,12 +117,15 @@ export class CashRegisterLog {
   note: string | null;
 
   /**
-   * Estado del cierre (CU-CAJ-02).
-   * CLOSED_OK si cuadra, CLOSED_WITH_DISCREPANCY si no.
+   * Estado del turno (CU-CAJ-02).
+   * OPEN: Turno en curso — el cajero está trabajando.
+   * CLOSED_OK: Cerrado sin descuadre.
+   * CLOSED_WITH_DISCREPANCY: Cerrado con faltante/sobrante.
    */
   @Column({
     type: 'enum',
     enum: CashRegisterStatus,
+    default: CashRegisterStatus.OPEN,
   })
   status: CashRegisterStatus;
 

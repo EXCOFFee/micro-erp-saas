@@ -71,7 +71,10 @@ export class Tenant {
    *   currency_symbol: "$" | "Gs" | "COP",
    *   timezone: "America/Argentina/Buenos_Aires",
    *   ticket_header: "KIOSCO CARLITOS - CUIT 20-12345678-9",
-   *   payment_alias: "alias.mercadopago" (CU-NOTIF-02)
+   *   payment_alias: "alias.mercadopago" (CU-NOTIF-02),
+   *   enabled_payment_methods: ["CASH", "TRANSFER"],
+   *   default_credit_limit_cents: 5000000,
+   *   auto_block_overdue_days: 3
    * }
    *
    * Se usa JSONB de PostgreSQL para evitar crear tablas adicionales
@@ -79,6 +82,23 @@ export class Tenant {
    */
   @Column({ type: 'jsonb', default: {} })
   settings: Record<string, unknown>;
+
+  /**
+   * FK al turno de caja actualmente abierto (spec_expansion_v2 — Fase 1).
+   *
+   * NULL = No hay turno abierto → se puede abrir uno nuevo.
+   * NOT NULL = Hay un turno en curso → se bloquea la apertura de otro.
+   *
+   * Este campo se usa como "semáforo" con Pessimistic Lock sobre la fila
+   * del Tenant para impedir que dos cajeros abran caja simultáneamente
+   * en un comercio de un solo mostrador.
+   *
+   * Ciclo de vida:
+   * - POST /cash-register/open  → SET active_cash_shift_id = new shift ID
+   * - POST /cash-register/close → SET active_cash_shift_id = NULL
+   */
+  @Column({ type: 'uuid', nullable: true, default: null })
+  active_cash_shift_id: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

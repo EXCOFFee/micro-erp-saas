@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CreatePaymentDto, CreateMixedPaymentDto } from './dto/create-payment.dto';
 import { ReverseTransactionDto } from './dto/reverse-transaction.dto';
 import { ForgiveDebtDto } from './dto/forgive-debt.dto';
 import { InflationAdjustmentDto } from './dto/inflation-adjustment.dto';
@@ -50,13 +51,31 @@ export class TransactionsController {
   /**
    * POST /transactions/payment — Registrar pago/cobranza (CU-TX-02).
    * Actores: Admin / Cajero.
+   * Acepta payment_method: CASH (default) o TRANSFER.
    */
   @Post('payment')
   registerPayment(
     @Req() req: { user: { id: string; tenant_id: string } },
-    @Body() dto: CreateTransactionDto,
+    @Body() dto: CreatePaymentDto,
   ) {
     return this.transactionsService.registerPayment(
+      req.user.tenant_id,
+      req.user.id,
+      dto,
+    );
+  }
+
+  /**
+   * POST /transactions/payment/mixed — Registrar pago mixto (Fase 1).
+   * Actores: Admin / Cajero.
+   * Genera DOS filas Transaction (CASH + TRANSFER) vinculadas por reference_group_id.
+   */
+  @Post('payment/mixed')
+  registerMixedPayment(
+    @Req() req: { user: { id: string; tenant_id: string } },
+    @Body() dto: CreateMixedPaymentDto,
+  ) {
+    return this.transactionsService.registerMixedPayment(
       req.user.tenant_id,
       req.user.id,
       dto,

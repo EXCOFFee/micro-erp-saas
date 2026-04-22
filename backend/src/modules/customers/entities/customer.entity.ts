@@ -135,6 +135,24 @@ export class Customer {
   is_overdue: boolean;
 
   /**
+   * Flag de auto-bloqueo por exceso de límite de crédito (spec_expansion_v2 — Fase 2).
+   *
+   * Cuando auto_block_on_limit = true:
+   * El OverdueCronService verifica si balance_cents >= credit_limit_cents.
+   * Si se cumple, el sistema pasa is_active = false automáticamente,
+   * bloqueando nuevos fiados sin intervención manual del Admin.
+   *
+   * Cuando auto_block_on_limit = false (default):
+   * El bloqueo por exceso de límite es solo preventivo (403 en registerDebt),
+   * pero el cliente NO se desactiva automáticamente.
+   *
+   * NOTA: Este flag es por CLIENTE, no por Tenant. Un Admin puede activarlo
+   * selectivamente para clientes "riesgosos" sin afectar a los VIP.
+   */
+  @Column({ type: 'boolean', default: false })
+  auto_block_on_limit: boolean;
+
+  /**
    * Dirección del cliente (opcional).
    * Útil para comercios con entrega a domicilio o cobranza en persona.
    */
