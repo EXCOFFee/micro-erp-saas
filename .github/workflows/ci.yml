@@ -33,12 +33,22 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
+          cache-dependency-path: '**/pnpm-lock.yaml'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies (Backend)
+        run: cd backend && pnpm install --frozen-lockfile
 
-      - name: Run linter
-        run: pnpm run lint
+      - name: Install dependencies (Frontend)
+        run: cd frontend && pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm run test
+      - name: Run linter (Backend)
+        run: cd backend && pnpm run lint
+
+      - name: Run tests (Backend)
+        run: cd backend && pnpm run test
+
+      - name: Run linter (Frontend)
+        run: cd frontend && pnpm run lint
+
+      - name: Run tests (Frontend)
+        run: cd frontend && pnpm run test
