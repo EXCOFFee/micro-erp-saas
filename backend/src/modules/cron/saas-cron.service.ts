@@ -18,7 +18,7 @@ export class SaasCronService {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async processSaaSExpirations() {
     this.logger.log('Iniciando proceso de expiración SaaS...');
-    
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
@@ -45,11 +45,15 @@ export class SaasCronService {
       for (const tenant of expiredTenants) {
         tenant.status = TenantStatus.SUSPENDED;
         await queryRunner.manager.save(tenant);
-        this.logger.log(`Tenant ${tenant.id} (${tenant.tenant_name}) suspendido por falta de pago.`);
+        this.logger.log(
+          `Tenant ${tenant.id} (${tenant.tenant_name}) suspendido por falta de pago.`,
+        );
       }
 
       await queryRunner.commitTransaction();
-      this.logger.log(`Proceso de expiración SaaS completado. ${expiredTenants.length} tenants suspendidos.`);
+      this.logger.log(
+        `Proceso de expiración SaaS completado. ${expiredTenants.length} tenants suspendidos.`,
+      );
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error('Error procesando expiraciones SaaS', error);

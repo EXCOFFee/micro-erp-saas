@@ -233,11 +233,10 @@ describe('TransactionsService', () => {
         findAndCount: jest.fn().mockResolvedValue([mockTx, 1]),
       });
 
-      const result = await service.findByCustomer(
-        'tenant-1',
-        'customer-1',
-        { limit: 10, offset: 0 },
-      );
+      const result = await service.findByCustomer('tenant-1', 'customer-1', {
+        limit: 10,
+        offset: 0,
+      });
 
       expect(result).toEqual({
         data: mockTx,

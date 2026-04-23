@@ -15,7 +15,7 @@ interface JwtPayloadUser {
   sub: string;
   tenant_id: string;
   role: string;
-  sub_status: string;
+  sub_status: TenantStatus;
   sub_expires_at: number | null;
 }
 
@@ -50,10 +50,13 @@ export class SubscriptionGuard implements CanActivate {
     }
 
     const status = user.sub_status;
-    
+
     // Si el status es SUSPENDED, bloquear
     if (status === TenantStatus.SUSPENDED) {
-      throw new HttpException('Comercio suspendido por falta de pago.', HttpStatus.PAYMENT_REQUIRED);
+      throw new HttpException(
+        'Comercio suspendido por falta de pago.',
+        HttpStatus.PAYMENT_REQUIRED,
+      );
     }
 
     // Si el status es PAST_DUE, verificamos los 3 días de gracia

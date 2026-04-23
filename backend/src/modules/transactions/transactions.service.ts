@@ -13,7 +13,10 @@ import { Customer } from '../customers/entities/customer.entity';
 import { TransactionType } from '../../common/enums/transaction-type.enum';
 import { PaymentMethod } from '../../common/enums/payment-method.enum';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { CreatePaymentDto, CreateMixedPaymentDto } from './dto/create-payment.dto';
+import {
+  CreatePaymentDto,
+  CreateMixedPaymentDto,
+} from './dto/create-payment.dto';
 import { ReverseTransactionDto } from './dto/reverse-transaction.dto';
 import { ForgiveDebtDto } from './dto/forgive-debt.dto';
 import { InflationAdjustmentDto } from './dto/inflation-adjustment.dto';
@@ -113,8 +116,8 @@ export class TransactionsService {
       if (newBalance > customer.credit_limit_cents) {
         this.logger.warn(
           `[DEBT] Rechazado: excede límite. Customer: ${dto.customer_id}, ` +
-          `balance: ${customer.balance_cents}, limit: ${customer.credit_limit_cents}, ` +
-          `intento: ${dto.amount_cents} — User: ${userId}`,
+            `balance: ${customer.balance_cents}, limit: ${customer.credit_limit_cents}, ` +
+            `intento: ${dto.amount_cents} — User: ${userId}`,
         );
         throw new UnprocessableEntityException(
           `Excede el límite de crédito. Saldo actual: ${customer.balance_cents} centavos, ` +
@@ -142,7 +145,7 @@ export class TransactionsService {
 
       this.logger.log(
         `[DEBT] OK — Customer: ${dto.customer_id}, monto: ${dto.amount_cents}, ` +
-        `balance: ${balanceBefore} → ${newBalance}, key: ${dto.idempotency_key} — User: ${userId}`,
+          `balance: ${balanceBefore} → ${newBalance}, key: ${dto.idempotency_key} — User: ${userId}`,
       );
 
       return transaction;
@@ -150,7 +153,7 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[DEBT] ROLLBACK — Customer: ${dto.customer_id}, monto: ${dto.amount_cents}, ` +
-        `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
+          `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
       );
       throw error;
     } finally {
@@ -245,7 +248,7 @@ export class TransactionsService {
 
       this.logger.log(
         `[PAYMENT] OK — Customer: ${dto.customer_id}, cobrado: ${effectiveAmount} (${paymentMethod}), ` +
-        `balance: ${balanceBefore} → ${customer.balance_cents}, key: ${dto.idempotency_key} — User: ${userId}`,
+          `balance: ${balanceBefore} → ${customer.balance_cents}, key: ${dto.idempotency_key} — User: ${userId}`,
       );
 
       return transaction;
@@ -253,7 +256,7 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[PAYMENT] ROLLBACK — Customer: ${dto.customer_id}, monto: ${dto.amount_cents}, ` +
-        `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
+          `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
       );
       throw error;
     } finally {
@@ -283,10 +286,13 @@ export class TransactionsService {
     dto: CreateMixedPaymentDto,
   ): Promise<{ cash: Transaction; transfer: Transaction }> {
     // Validación aritmética antes de abrir transacción
-    if (dto.cash_amount_cents + dto.transfer_amount_cents !== dto.total_amount_cents) {
+    if (
+      dto.cash_amount_cents + dto.transfer_amount_cents !==
+      dto.total_amount_cents
+    ) {
       throw new UnprocessableEntityException(
         `La suma de efectivo (${dto.cash_amount_cents}) + transferencia (${dto.transfer_amount_cents}) ` +
-        `no coincide con el total (${dto.total_amount_cents})`,
+          `no coincide con el total (${dto.total_amount_cents})`,
       );
     }
 
@@ -314,8 +320,12 @@ export class TransactionsService {
               where: { reference_group_id: existing.reference_group_id },
             })
           : [existing];
-        const cashTx = groupTxs.find(t => t.payment_method === PaymentMethod.CASH) ?? existing;
-        const transferTx = groupTxs.find(t => t.payment_method === PaymentMethod.TRANSFER) ?? existing;
+        const cashTx =
+          groupTxs.find((t) => t.payment_method === PaymentMethod.CASH) ??
+          existing;
+        const transferTx =
+          groupTxs.find((t) => t.payment_method === PaymentMethod.TRANSFER) ??
+          existing;
         return { cash: cashTx, transfer: transferTx };
       }
 
@@ -337,7 +347,10 @@ export class TransactionsService {
       // Ajustar si el total supera la deuda — prorratear proporcionalmente
       let cashEffective = dto.cash_amount_cents;
       let transferEffective = dto.transfer_amount_cents;
-      const totalEffective = Math.min(dto.total_amount_cents, customer.balance_cents);
+      const totalEffective = Math.min(
+        dto.total_amount_cents,
+        customer.balance_cents,
+      );
 
       if (totalEffective < dto.total_amount_cents) {
         const ratio = totalEffective / dto.total_amount_cents;
@@ -376,7 +389,7 @@ export class TransactionsService {
       await queryRunner.manager.save(transferTx);
 
       // Restar del balance (monto total efectivo)
-      customer.balance_cents -= (cashEffective + transferEffective);
+      customer.balance_cents -= cashEffective + transferEffective;
       if (customer.balance_cents < 0) customer.balance_cents = 0;
       await queryRunner.manager.save(customer);
 
@@ -384,9 +397,9 @@ export class TransactionsService {
 
       this.logger.log(
         `[MIXED-PAYMENT] OK — Customer: ${dto.customer_id}, ` +
-        `cash: ${cashEffective}, transfer: ${transferEffective}, ` +
-        `balance: ${balanceBefore} → ${customer.balance_cents}, ` +
-        `group: ${groupId} — User: ${userId}`,
+          `cash: ${cashEffective}, transfer: ${transferEffective}, ` +
+          `balance: ${balanceBefore} → ${customer.balance_cents}, ` +
+          `group: ${groupId} — User: ${userId}`,
       );
 
       return { cash: cashTx, transfer: transferTx };
@@ -394,7 +407,7 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[MIXED-PAYMENT] ROLLBACK — Customer: ${dto.customer_id}, ` +
-        `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
+          `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
       );
       throw error;
     } finally {
@@ -514,8 +527,8 @@ export class TransactionsService {
 
       this.logger.log(
         `[REVERSAL] OK — TX original: ${transactionId} (${original.type}), ` +
-        `Customer: ${original.customer_id}, monto: ${original.amount_cents}, ` +
-        `balance: ${balanceBefore} → ${customer.balance_cents} — User: ${userId}`,
+          `Customer: ${original.customer_id}, monto: ${original.amount_cents}, ` +
+          `balance: ${balanceBefore} → ${customer.balance_cents} — User: ${userId}`,
       );
 
       return reversal;
@@ -523,7 +536,7 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[REVERSAL] ROLLBACK — TX: ${transactionId}, key: ${dto.idempotency_key} ` +
-        `— User: ${userId} — Error: ${String(error)}`,
+          `— User: ${userId} — Error: ${String(error)}`,
       );
       throw error;
     } finally {
@@ -611,7 +624,7 @@ export class TransactionsService {
 
       this.logger.log(
         `[FORGIVENESS] OK — Customer: ${dto.customer_id}, condonado: ${forgivenAmount}, ` +
-        `balance: ${forgivenAmount} → 0 — User: ${userId}`,
+          `balance: ${forgivenAmount} → 0 — User: ${userId}`,
       );
 
       return transaction;
@@ -619,7 +632,7 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[FORGIVENESS] ROLLBACK — Customer: ${dto.customer_id}, ` +
-        `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
+          `key: ${dto.idempotency_key} — User: ${userId} — Error: ${String(error)}`,
       );
       throw error;
     } finally {
@@ -714,7 +727,7 @@ export class TransactionsService {
 
       this.logger.log(
         `[INFLATION] OK — ${debtors.length} clientes afectados, ` +
-        `total ajuste: ${totalAdjustment} centavos (${dto.percentage}%) — User: ${userId}`,
+          `total ajuste: ${totalAdjustment} centavos (${dto.percentage}%) — User: ${userId}`,
       );
 
       return {
@@ -725,7 +738,7 @@ export class TransactionsService {
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `[INFLATION] ROLLBACK — ${dto.percentage}%, key: ${dto.idempotency_key} ` +
-        `— User: ${userId} — Error: ${String(error)}`,
+          `— User: ${userId} — Error: ${String(error)}`,
       );
       throw error;
     } finally {
@@ -744,7 +757,12 @@ export class TransactionsService {
     tenantId: string,
     customerId: string,
     pagination: { limit: number; offset: number } = { limit: 20, offset: 0 },
-  ): Promise<{ data: Transaction[]; total: number; limit: number; offset: number }> {
+  ): Promise<{
+    data: Transaction[];
+    total: number;
+    limit: number;
+    offset: number;
+  }> {
     const repo = this.dataSource.getRepository(Transaction);
 
     const [data, total] = await repo.findAndCount({

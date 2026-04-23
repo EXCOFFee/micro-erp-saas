@@ -74,7 +74,9 @@ export class OverdueCronService {
     timeZone: 'America/Argentina/Buenos_Aires', // Zona horaria del mercado objetivo
   })
   async scheduledOverdueCheck(): Promise<void> {
-    this.logger.log('[CRON] Iniciando detección automática de mora (08:00 ART)');
+    this.logger.log(
+      '[CRON] Iniciando detección automática de mora (08:00 ART)',
+    );
     await this.processOverdueCustomers();
   }
 
@@ -107,7 +109,9 @@ export class OverdueCronService {
     // Así un cliente con promise_date = HOY no queda como moroso durante el día.
     today.setHours(0, 0, 0, 0);
 
-    this.logger.log(`[CRON-MORA] Buscando clientes morosos con promise < ${today.toISOString()}`);
+    this.logger.log(
+      `[CRON-MORA] Buscando clientes morosos con promise < ${today.toISOString()}`,
+    );
 
     /**
      * Buscamos clientes que cumplan las 3 condiciones simultáneamente.
@@ -130,7 +134,9 @@ export class OverdueCronService {
       select: ['id', 'tenant_id', 'balance_cents', 'next_payment_promise'],
     });
 
-    this.logger.log(`[CRON-MORA] ${overdueCustomers.length} clientes candidatos encontrados`);
+    this.logger.log(
+      `[CRON-MORA] ${overdueCustomers.length} clientes candidatos encontrados`,
+    );
 
     if (overdueCustomers.length === 0) {
       return { processed: 0 };
@@ -149,7 +155,9 @@ export class OverdueCronService {
       .whereInIds(overdueIds)
       .execute();
 
-    this.logger.log(`[CRON-MORA] ${overdueIds.length} clientes marcados como morosos`);
+    this.logger.log(
+      `[CRON-MORA] ${overdueIds.length} clientes marcados como morosos`,
+    );
 
     // ── AUDIT LOGS — FIRE-AND-FORGET ─────────────────────────────────────────
     void this.insertAuditLogsFireAndForget(overdueCustomers);
@@ -192,10 +200,7 @@ export class OverdueCronService {
       if (tenants.length === 0) return;
 
       for (const tenant of tenants) {
-        const days = parseInt(
-          String(tenant.settings?.auto_block_overdue_days ?? '0'),
-          10,
-        );
+        const days = Number(tenant.settings?.auto_block_overdue_days ?? 0);
 
         if (!days || days < 1) continue;
 
@@ -236,7 +241,10 @@ export class OverdueCronService {
    * @param customers - Lista de clientes que fueron marcados como morosos
    */
   private async insertAuditLogsFireAndForget(
-    customers: Pick<Customer, 'id' | 'tenant_id' | 'balance_cents' | 'next_payment_promise'>[],
+    customers: Pick<
+      Customer,
+      'id' | 'tenant_id' | 'balance_cents' | 'next_payment_promise'
+    >[],
   ): Promise<void> {
     for (const customer of customers) {
       try {

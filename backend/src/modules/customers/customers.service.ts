@@ -226,7 +226,7 @@ export class CustomersService {
         c.phone ?? '',
         c.dni ?? '',
         c.email ?? '',
-        `"${c.address ?? ''}"`  ,
+        `"${c.address ?? ''}"`,
         (c.balance_cents / 100).toFixed(2),
         (c.credit_limit_cents / 100).toFixed(2),
         c.is_active ? 'Activo' : 'Bloqueado',
@@ -288,7 +288,7 @@ export class CustomersService {
 
       this.logger.log(
         `[CREDIT-LIMIT] OK — Customer: ${customerId}, ` +
-        `límite: ${oldLimit} → ${dto.credit_limit_cents}`,
+          `límite: ${oldLimit} → ${dto.credit_limit_cents}`,
       );
 
       return customer;

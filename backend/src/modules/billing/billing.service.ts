@@ -14,13 +14,16 @@ export class BillingService {
   /**
    * Verifica la firma HMAC-SHA256 de MercadoPago.
    */
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
   verifySignature(signature: string, requestId: string, body: any): boolean {
     if (!signature || !requestId || !body) return false;
-    
+
     // Si no hay secreto configurado (ej: test local), omitimos validación
     const secret = process.env.MP_WEBHOOK_SECRET;
     if (!secret) {
-      this.logger.warn('MP_WEBHOOK_SECRET no configurado. Omitiendo validación (solo usar en dev).');
+      this.logger.warn(
+        'MP_WEBHOOK_SECRET no configurado. Omitiendo validación (solo usar en dev).',
+      );
       return true;
     }
 
@@ -42,7 +45,10 @@ export class BillingService {
       const dataId = body.data?.id;
       const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
 
-      const hmac = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
+      const hmac = crypto
+        .createHmac('sha256', secret)
+        .update(manifest)
+        .digest('hex');
 
       return hmac === v1;
     } catch (e) {
@@ -55,7 +61,10 @@ export class BillingService {
    * Procesamiento idempotente del pago.
    * Utiliza una transacción para evitar condiciones de carrera.
    */
-  async processPayment(externalPaymentId: string, rawPayload: any): Promise<void> {
+  async processPayment(
+    externalPaymentId: string,
+    rawPayload: any,
+  ): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -67,7 +76,9 @@ export class BillingService {
       });
 
       if (existingEvent) {
-        this.logger.log(`El pago ${externalPaymentId} ya fue procesado. Ignorando.`);
+        this.logger.log(
+          `El pago ${externalPaymentId} ya fue procesado. Ignorando.`,
+        );
         await queryRunner.commitTransaction();
         return;
       }
@@ -77,9 +88,10 @@ export class BillingService {
       // que obtenemos el `mp_subscription_id` o el `tenant_id` de alguna metadata.
       // Para este demo, buscaremos el tenant usando un external_reference si viniera,
       // pero simularemos un pago de prueba buscando el primer tenant (o uno con el subscription_id)
-      
-      const mpSubscriptionId = rawPayload.data?.subscription_id || 'test_sub_id';
-      
+
+      const mpSubscriptionId =
+        rawPayload.data?.subscription_id || 'test_sub_id';
+
       // Intentamos encontrar el tenant
       const tenant = await queryRunner.manager.findOne(Tenant, {
         where: { mp_subscription_id: mpSubscriptionId },
@@ -87,12 +99,16 @@ export class BillingService {
 
       if (!tenant) {
         // En este MVP simulamos que lo vinculamos a un tenant conocido si no hay
-        this.logger.warn(`Tenant no encontrado para suscripción ${mpSubscriptionId}`);
+        this.logger.warn(
+          `Tenant no encontrado para suscripción ${mpSubscriptionId}`,
+        );
         // await queryRunner.rollbackTransaction();
         // return;
       }
 
-      const tenantId = tenant ? tenant.id : '00000000-0000-0000-0000-000000000000'; // Fallback a algún UUID o lanzar error
+      const tenantId = tenant
+        ? tenant.id
+        : '00000000-0000-0000-0000-000000000000'; // Fallback a algún UUID o lanzar error
 
       // 1. Insertar el BillingEvent
       const event = queryRunner.manager.create(BillingEvent, {
@@ -105,11 +121,13 @@ export class BillingService {
       });
 
       if (tenant) {
-         await queryRunner.manager.save(event);
+        await queryRunner.manager.save(event);
 
         // 2. Actualizar el Tenant
         // Sumar 30 días a la expiración
-        const currentExpiration = tenant.subscription_expires_at ? new Date(tenant.subscription_expires_at) : new Date();
+        const currentExpiration = tenant.subscription_expires_at
+          ? new Date(tenant.subscription_expires_at)
+          : new Date();
         const newExpiration = new Date(currentExpiration);
         newExpiration.setDate(newExpiration.getDate() + 30);
 
@@ -120,7 +138,9 @@ export class BillingService {
       } else {
         // Si no hay tenant mapeado, no podemos procesarlo en la BD real.
         // Simulamos completarlo igual o loguear.
-        this.logger.error('No se pudo procesar porque el tenant_id no es resoluble');
+        this.logger.error(
+          'No se pudo procesar porque el tenant_id no es resoluble',
+        );
       }
 
       await queryRunner.commitTransaction();

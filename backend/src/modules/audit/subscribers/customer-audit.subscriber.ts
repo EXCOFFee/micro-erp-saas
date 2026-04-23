@@ -58,9 +58,7 @@ interface AuditLogInput {
  *   (Para propagarlo se necesitaría NestJS CLS — ver nota al final del archivo.)
  */
 @EventSubscriber()
-export class CustomerAuditSubscriber
-  implements EntitySubscriberInterface<Customer>
-{
+export class CustomerAuditSubscriber implements EntitySubscriberInterface<Customer> {
   /**
    * Logger nativo de NestJS.
    * Aparecerá en los logs de Render con el contexto "CustomerAuditSubscriber"
@@ -110,9 +108,9 @@ export class CustomerAuditSubscriber
    *
    * @param event - El evento de actualización con el snapshot anterior y posterior
    */
-  async afterUpdate(event: UpdateEvent<Customer>): Promise<void> {
-    const previous = event.databaseEntity;
-    const updated = event.entity;
+  afterUpdate(event: UpdateEvent<Customer>): void {
+    const previous = event.databaseEntity as Customer | undefined;
+    const updated = event.entity as Customer | undefined;
 
     // Protección defensiva: si TypeORM no provee alguno de los snapshots
     // (edge case poco frecuente), no podemos construir un diff útil.
@@ -236,9 +234,9 @@ export class CustomerAuditSubscriber
       // En producción avanzada: integrar con Sentry o Datadog aquí para
       // alertar cuando haya gaps en el audit trail.
       this.logger.error(
-        `[AUDIT] ERROR insertando audit log para Customer `
-          + `${String(event.entity?.id ?? 'unknown')}. `
-          + `El UPDATE de negocio NO fue afectado. Detalle: ${String(error)}`,
+        `[AUDIT] ERROR insertando audit log para Customer ` +
+          `${String(event.entity?.id ?? 'unknown')}. ` +
+          `El UPDATE de negocio NO fue afectado. Detalle: ${String(error)}`,
       );
     }
   }

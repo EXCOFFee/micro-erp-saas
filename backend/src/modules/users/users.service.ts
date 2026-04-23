@@ -158,12 +158,17 @@ export class UsersService {
   ): Promise<{ message: string }> {
     const user = await this.findUserOrFail(tenantId, userId);
 
-    user.password_hash = await bcrypt.hash(dto.new_password, this.BCRYPT_ROUNDS);
+    user.password_hash = await bcrypt.hash(
+      dto.new_password,
+      this.BCRYPT_ROUNDS,
+    );
     user.token_version += 1; // Invalida sesiones activas forzando re-login
 
     await this.userRepository.save(user);
 
-    return { message: 'Contraseña reseteada. El cajero deberá loguearse nuevamente.' };
+    return {
+      message: 'Contraseña reseteada. El cajero deberá loguearse nuevamente.',
+    };
   }
 
   /**

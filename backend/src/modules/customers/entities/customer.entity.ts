@@ -28,7 +28,7 @@ import { Tenant } from '../../tenants/entities/tenant.entity';
 @Entity('customers')
 @Index(['tenant_id']) // Aislamiento multi-tenant en todas las queries
 @Index(['tenant_id', 'balance_cents']) // Performance: Dashboard de morosos (CU-DASH-01)
-@Index(['tenant_id', 'is_overdue'])    // Performance: Cron Job busca morosos por tenant (HU6)
+@Index(['tenant_id', 'is_overdue']) // Performance: Cron Job busca morosos por tenant (HU6)
 export class Customer {
   @PrimaryGeneratedColumn('uuid')
   id: string;

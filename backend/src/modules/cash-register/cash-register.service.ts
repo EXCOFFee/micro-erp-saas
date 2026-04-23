@@ -157,10 +157,7 @@ export class CashRegisterService {
    * Directiva Técnica (CU-CAJ-01):
    * Usa SUM() en PostgreSQL — NUNCA trae todas las transacciones a Node.js.
    */
-  async getActiveSummary(
-    tenantId: string,
-    userId: string,
-  ): Promise<CashSummary> {
+  async getActiveSummary(tenantId: string): Promise<CashSummary> {
     // Buscar el turno OPEN del tenant
     const activeShift = await this.dataSource
       .getRepository(CashRegisterLog)
@@ -212,7 +209,8 @@ export class CashRegisterService {
 
     return {
       shift_id: activeShift.id,
-      expected_cash_cents: activeShift.opening_cash_cents + (cashResult?.total ?? 0),
+      expected_cash_cents:
+        activeShift.opening_cash_cents + (cashResult?.total ?? 0),
       opening_cash_cents: activeShift.opening_cash_cents,
       opened_at: activeShift.opened_at,
       payment_count: cashResult?.count ?? 0,
@@ -249,12 +247,10 @@ export class CashRegisterService {
     tenantId: string,
     shiftId: string,
   ): Promise<{ shift: CashRegisterLog; transactions: Transaction[] }> {
-    const shift = await this.dataSource
-      .getRepository(CashRegisterLog)
-      .findOne({
-        where: { id: shiftId, tenant_id: tenantId },
-        relations: ['user'],
-      });
+    const shift = await this.dataSource.getRepository(CashRegisterLog).findOne({
+      where: { id: shiftId, tenant_id: tenantId },
+      relations: ['user'],
+    });
 
     if (!shift) {
       throw new NotFoundException('Turno de caja no encontrado');
@@ -392,7 +388,7 @@ export class CashRegisterService {
 
       this.logger.log(
         `[CASH-CLOSE] OK — Shift: ${shift.id}, expected: ${totalExpected}, actual: ${dto.actual_cash_cents}, ` +
-        `discrepancy: ${discrepancy}, status: ${status} — Tenant: ${tenantId}, User: ${userId}`,
+          `discrepancy: ${discrepancy}, status: ${status} — Tenant: ${tenantId}, User: ${userId}`,
       );
 
       return shift;

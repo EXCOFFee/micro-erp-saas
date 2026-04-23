@@ -12,6 +12,14 @@ import type { Request, Response } from 'express';
 import { BillingService } from './billing.service';
 import { Public } from '../../common/decorators/public.decorator';
 
+export interface MercadoPagoWebhookBody {
+  action?: string;
+  type?: string;
+  data?: {
+    id?: string | number;
+  };
+  [key: string]: unknown;
+}
 @Controller('billing')
 export class BillingController {
   private readonly logger = new Logger(BillingController.name);
@@ -24,6 +32,7 @@ export class BillingController {
    */
   @Public()
   @Post('webhook/mercadopago')
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
   async handleMercadoPagoWebhook(
     @Headers('x-signature') signature: string,
     @Headers('x-request-id') requestId: string,

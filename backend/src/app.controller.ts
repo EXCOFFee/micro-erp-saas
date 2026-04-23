@@ -5,7 +5,7 @@ import { Public } from './common/decorators/public.decorator';
 export class AppController {
   /**
    * Health Check (@Public())
-   * 
+   *
    * Endpoint simple para que cron-job.org o UptimeRobot eviten
    * la hibernación del servidor (Render Free Tier).
    */

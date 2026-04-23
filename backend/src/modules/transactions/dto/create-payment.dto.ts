@@ -46,7 +46,9 @@ export class CreatePaymentDto {
    * Default: CASH si no se envía (compatibilidad retroactiva).
    */
   @IsOptional()
-  @IsEnum(PaymentMethod, { message: 'El método de pago debe ser CASH o TRANSFER' })
+  @IsEnum(PaymentMethod, {
+    message: 'El método de pago debe ser CASH o TRANSFER',
+  })
   payment_method?: PaymentMethod;
 }
 
@@ -77,7 +79,9 @@ export class CreateMixedPaymentDto {
   /**
    * Porción pagada en efectivo, EN CENTAVOS.
    */
-  @IsInt({ message: 'El monto en efectivo debe ser un número entero (centavos)' })
+  @IsInt({
+    message: 'El monto en efectivo debe ser un número entero (centavos)',
+  })
   @IsPositive({ message: 'El monto en efectivo debe ser mayor a 0' })
   @Type(() => Number)
   cash_amount_cents: number;
@@ -85,7 +89,9 @@ export class CreateMixedPaymentDto {
   /**
    * Porción pagada por transferencia, EN CENTAVOS.
    */
-  @IsInt({ message: 'El monto de transferencia debe ser un número entero (centavos)' })
+  @IsInt({
+    message: 'El monto de transferencia debe ser un número entero (centavos)',
+  })
   @IsPositive({ message: 'El monto de transferencia debe ser mayor a 0' })
   @Type(() => Number)
   transfer_amount_cents: number;

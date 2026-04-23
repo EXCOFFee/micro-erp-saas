@@ -73,11 +73,12 @@ export class CronController {
    * @returns 200 OK con mensaje de confirmación
    */
   @Post('process-overdue')
-  @Public()     // Excluye del JwtAuthGuard global — la auth es por API Key
+  @Public() // Excluye del JwtAuthGuard global — la auth es por API Key
   @HttpCode(200) // Fuerza 200 en vez de 201 (es una acción, no una creación)
-  triggerOverdueProcess(
-    @Headers('x-cron-secret') secret: string | undefined,
-  ): { message: string; triggered_at: string } {
+  triggerOverdueProcess(@Headers('x-cron-secret') secret: string | undefined): {
+    message: string;
+    triggered_at: string;
+  } {
     // ── VALIDACIÓN DE API KEY ──────────────────────────────────────────────
     // Leemos la clave esperada desde las variables de entorno.
     // NUNCA hardcodeada — Regla de higiene del spec.md (§3.C).
@@ -91,7 +92,9 @@ export class CronController {
       throw new UnauthorizedException('X-Cron-Secret inválido o ausente');
     }
 
-    this.logger.log('[WEBHOOK-CRON] Autenticación OK. Proceso de mora delegado al background.');
+    this.logger.log(
+      '[WEBHOOK-CRON] Autenticación OK. Proceso de mora delegado al background.',
+    );
 
     // ── FIRE-AND-FORGET (DoD §5 — spec_part_2.md) ─────────────────────────
     // Retornamos 200 OK ANTES de que el proceso termine.
@@ -102,15 +105,18 @@ export class CronController {
     // Sí: el OverdueCronService tiene su propio manejo de errores interno.
     // Si el proceso falla, el error aparece en los logs de Render.
     // En producción avanzada, integrar con Sentry para alertas automáticas.
-    void this.overdueCronService.processOverdueCustomers().then((result) => {
-      this.logger.log(
-        `[WEBHOOK-CRON] Proceso completado. Clientes marcados: ${result.processed}`,
-      );
-    }).catch((error: unknown) => {
-      this.logger.error(
-        `[WEBHOOK-CRON] Error en proceso de mora: ${String(error)}`,
-      );
-    });
+    void this.overdueCronService
+      .processOverdueCustomers()
+      .then((result) => {
+        this.logger.log(
+          `[WEBHOOK-CRON] Proceso completado. Clientes marcados: ${result.processed}`,
+        );
+      })
+      .catch((error: unknown) => {
+        this.logger.error(
+          `[WEBHOOK-CRON] Error en proceso de mora: ${String(error)}`,
+        );
+      });
 
     // Respuesta inmediata — el proceso sigue corriendo en background
     return {

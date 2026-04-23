@@ -92,9 +92,10 @@ export class UpdateSettingsDto {
    * Si es null o 0, el default sigue siendo 0 (sin crédito hasta configurar).
    */
   @IsOptional()
-  @IsInt({ message: 'El límite de crédito default debe ser un entero (centavos)' })
+  @IsInt({
+    message: 'El límite de crédito default debe ser un entero (centavos)',
+  })
   @Min(0, { message: 'El límite de crédito no puede ser negativo' })
   @Type(() => Number)
   default_credit_limit_cents?: number;
 }
-

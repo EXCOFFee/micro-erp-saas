@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { CreatePaymentDto, CreateMixedPaymentDto } from './dto/create-payment.dto';
+import {
+  CreatePaymentDto,
+  CreateMixedPaymentDto,
+} from './dto/create-payment.dto';
 import { ReverseTransactionDto } from './dto/reverse-transaction.dto';
 import { ForgiveDebtDto } from './dto/forgive-debt.dto';
 import { InflationAdjustmentDto } from './dto/inflation-adjustment.dto';

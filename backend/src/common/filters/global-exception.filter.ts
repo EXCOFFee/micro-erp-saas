@@ -35,15 +35,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
      * Structured Logging (Enterprise: CloudWatch/Datadog)
      * Generamos un payload JSON que incluye el tenantId para trazabilidad SaaS multi-tenant.
      */
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    const tenantId = (request as any).user?.tenantId || null;
+    const tenantId =
+      (request as Request & { user?: { tenantId?: string } }).user?.tenantId ||
+      null;
 
     const logPayload = {
       timestamp: new Date().toISOString(),
       statusCode: status,
       path: request.url,
       method: request.method,
-      error: exception instanceof Error ? exception.stack || exception.message : String(exception),
+      error:
+        exception instanceof Error
+          ? exception.stack || exception.message
+          : String(exception),
       tenantId,
     };
 
@@ -57,7 +61,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const errorJson =
         typeof exceptionResponse === 'string'
           ? { message: exceptionResponse }
-          : (exceptionResponse as object);
+          : exceptionResponse;
 
       response.status(status).json({
         ...errorJson,

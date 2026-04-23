@@ -39,9 +39,10 @@ async function bootstrap() {
    * Si no está definido en production, RECHAZA todo por defecto.
    */
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production'
-      ? process.env.FRONTEND_URL
-      : (process.env.FRONTEND_URL || 'http://localhost:3001'),
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL
+        : process.env.FRONTEND_URL || 'http://localhost:3001',
     credentials: true,
   });
 
@@ -74,7 +75,7 @@ async function bootstrap() {
   /**
    * Throttler / Proxies en Producción:
    * Al estar desplegados en la nube (Render/Vercel/etc.), estamos tras un proxy.
-   * Trust Proxy permite que express reconozca la IP real del usuario en lugar de 
+   * Trust Proxy permite que express reconozca la IP real del usuario en lugar de
    * la IP del load balancer, fundamental para que el Rate Limiting discrimine bien.
    */
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call

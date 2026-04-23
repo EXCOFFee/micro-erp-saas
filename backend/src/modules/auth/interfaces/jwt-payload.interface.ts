@@ -66,4 +66,3 @@ export interface JwtPayload {
    */
   sub_expires_at: number;
 }
-

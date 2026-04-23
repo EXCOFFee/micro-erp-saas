@@ -58,10 +58,7 @@ export class CashRegisterController {
    */
   @Get('summary')
   getSummary(@Req() req: { user: { id: string; tenant_id: string } }) {
-    return this.cashRegisterService.getActiveSummary(
-      req.user.tenant_id,
-      req.user.id,
-    );
+    return this.cashRegisterService.getActiveSummary(req.user.tenant_id);
   }
 
   /**
@@ -76,7 +73,11 @@ export class CashRegisterController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
     const safeLimit = Math.min(limit, 100);
-    return this.cashRegisterService.getHistory(req.user.tenant_id, page, safeLimit);
+    return this.cashRegisterService.getHistory(
+      req.user.tenant_id,
+      page,
+      safeLimit,
+    );
   }
 
   /**

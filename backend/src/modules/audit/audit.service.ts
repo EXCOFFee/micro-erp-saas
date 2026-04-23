@@ -56,7 +56,7 @@ export class AuditService {
   async log(params: {
     tenantId: string;
     userId: string | null;
-    action: AuditAction;              // Tipado estricto: solo valores del enum
+    action: AuditAction; // Tipado estricto: solo valores del enum
     entityType: string;
     entityId: string;
     oldValue: Record<string, unknown> | null;

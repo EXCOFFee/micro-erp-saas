@@ -51,10 +51,12 @@ import { AppController } from './app.controller';
      * Rate Limiting Global
      * Previene ataques DDoS bloqueando un máximo de 100 peticiones cada 60000ms.
      */
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
 
     /** Conexión PostgreSQL con pool conservador para Supabase Free Tier */
     DatabaseModule,

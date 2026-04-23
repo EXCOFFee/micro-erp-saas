@@ -80,7 +80,7 @@ export class DashboardService {
       todayDebtsResult,
       weekCollectionsResult,
       weekDebtsResult,
-      topDebtors
+      topDebtors,
     ] = await Promise.all([
       // 1. total_receivable_cents
       customerRepo

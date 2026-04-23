@@ -40,8 +40,8 @@ import { AuditAction } from '../../../common/enums/audit-action.enum';
  */
 @Entity('audit_logs')
 @Index(['tenant_id', 'created_at']) // Búsquedas de auditoría por rango horario
-@Index(['tenant_id', 'action'])     // Filtrar por tipo de acción por tenant
-@Index(['entity_id'])               // Localizar el historial de un registro específico
+@Index(['tenant_id', 'action']) // Filtrar por tipo de acción por tenant
+@Index(['entity_id']) // Localizar el historial de un registro específico
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
