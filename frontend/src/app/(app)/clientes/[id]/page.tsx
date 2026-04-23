@@ -11,6 +11,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TicketPreview } from '@/components/TicketPreview';
+import type { TicketPreviewProps } from '@/components/TicketPreview';
 
 /**
  * Detalle de Cliente — Perfil completo con acciones y transacciones.
@@ -28,7 +30,7 @@ import { Label } from '@/components/ui/label';
 export default function ClienteDetallePage() {
     const params = useParams();
     const router = useRouter();
-    const { isAdmin } = useAuth();
+    const { isAdmin, user } = useAuth();
     const id = params.id as string;
 
     const [customer, setCustomer] = useState<Customer | null>(null);
@@ -56,6 +58,9 @@ export default function ClienteDetallePage() {
     const [editNotes, setEditNotes] = useState('');
     const [editTags, setEditTags] = useState(''); // CSV string, split on save
     const [editSaved, setEditSaved] = useState(false);
+
+    // Ticket modal state
+    const [ticketData, setTicketData] = useState<TicketPreviewProps | null>(null);
 
     const loadData = useCallback(async () => {
         try {
@@ -209,15 +214,50 @@ export default function ClienteDetallePage() {
             // POST /transactions/debt  → registrar fiado
             // POST /transactions/payment → registrar pago
             const endpoint = type === 'DEBT' ? '/transactions/debt' : '/transactions/payment';
-            await api.post(endpoint, {
+            const txResponse = await api.post<{ id: string; customer_id: string; amount_cents: number; created_at: string }>(endpoint, {
                 customer_id: id,
                 amount_cents: amountCents,
                 description: txDescription || undefined,
                 idempotency_key: crypto.randomUUID(),
             });
+
+            const descCopy = txDescription;
             setTxAmount('');
             setTxDescription('');
             await loadData();
+
+            // Generar magic link y mostrar ticket
+            try {
+                const linkRes = await api.post<{ link: string }>(`/notifications/summary-link/${id}`);
+                const magicUrl = window.location.origin + linkRes.data.link;
+
+                setTicketData({
+                    tenantName: 'MI COMERCIO',
+                    date: txResponse.data.created_at || new Date().toISOString(),
+                    customerName: customer?.full_name ?? 'Cliente',
+                    type,
+                    amountCents,
+                    balanceCents: customer?.balance_cents ?? 0,
+                    cashierName: user?.email ?? 'Cajero',
+                    transactionId: txResponse.data.id,
+                    magicLinkUrl: magicUrl,
+                    description: descCopy || undefined,
+                });
+            } catch {
+                // Si falla el magic link, mostramos el ticket igual con URL placeholder
+                setTicketData({
+                    tenantName: 'MI COMERCIO',
+                    date: txResponse.data.created_at || new Date().toISOString(),
+                    customerName: customer?.full_name ?? 'Cliente',
+                    type,
+                    amountCents,
+                    balanceCents: customer?.balance_cents ?? 0,
+                    cashierName: user?.email ?? 'Cajero',
+                    transactionId: txResponse.data.id,
+                    magicLinkUrl: window.location.href,
+                    description: descCopy || undefined,
+                });
+            }
         } catch (err) {
             if (err instanceof AxiosError && err.response?.data?.message) alert(err.response.data.message);
             else alert(err instanceof Error ? err.message : 'Error');
@@ -481,6 +521,32 @@ export default function ClienteDetallePage() {
                     </div>
                 </div>
             </Card>
+
+            {/* ── Modal de Ticket (éxito post-transacción) ──────────────── */}
+            {ticketData && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm print:bg-transparent print:backdrop-blur-none">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto print:shadow-none print:rounded-none print:max-w-none print:mx-0">
+                        {/* Preview del ticket */}
+                        <TicketPreview {...ticketData} />
+
+                        {/* Botones de acción (ocultos en impresión) */}
+                        <div className="flex gap-3 p-4 border-t border-gray-200 print:hidden">
+                            <button
+                                onClick={() => window.print()}
+                                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl text-lg transition-colors"
+                            >
+                                🖨️ Imprimir Ticket
+                            </button>
+                            <button
+                                onClick={() => setTicketData(null)}
+                                className="px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors font-medium"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Promise form */}
             {showPromise && (
