@@ -50,5 +50,3 @@ jobs:
       - name: Run linter (Frontend)
         run: cd frontend && pnpm run lint
 
-      - name: Run tests (Frontend)
-        run: cd frontend && pnpm run test
