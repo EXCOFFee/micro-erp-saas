@@ -13,8 +13,9 @@ import { Label } from '@/components/ui/label';
 // ─── Tipos locales sincronizados con el backend ───────────────────────────────
 
 interface CashSummary {
+    shift_id: string | null;
     expected_cash_cents: number;
-    opened_at: string;
+    opened_at: string | null;
     payment_count: number;
     transfer_total_cents: number;
 }
@@ -54,6 +55,11 @@ export default function CajaPage() {
     const [summary, setSummary] = useState<CashSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    // ── Apertura de caja ────────────────────────────────────────────
+    const [showOpen, setShowOpen] = useState(false);
+    const [openingFund, setOpeningFund] = useState('');
+    const [opening, setOpening] = useState(false);
 
     // ── Cierre de caja ────────────────────────────────────────────
     const [showClose, setShowClose] = useState(false);
@@ -111,6 +117,26 @@ export default function CajaPage() {
             loadHistory(1);
         }
     }, [tab, isAdmin, loadHistory]);
+
+    async function handleOpen(e: React.FormEvent) {
+        e.preventDefault();
+        setOpening(true);
+        try {
+            const cents = openingFund ? Math.round(parseFloat(openingFund) * 100) : 0;
+            await api.post('/cash-register/open', { opening_cash_cents: cents });
+            setShowOpen(false);
+            setOpeningFund('');
+            await loadSummary();
+        } catch (err) {
+            if (err instanceof AxiosError && err.response?.data?.message) {
+                alert(err.response.data.message);
+            } else {
+                alert(err instanceof Error ? err.message : 'Error al abrir');
+            }
+        } finally {
+            setOpening(false);
+        }
+    }
 
     async function handleClose(e: React.FormEvent) {
         e.preventDefault();
@@ -225,7 +251,7 @@ export default function CajaPage() {
             </div>
 
             {/* ── TAB: TURNO ACTUAL ─────────────────────────────────────────── */}
-            {tab === 'turno' && (
+            {tab === 'turno' && summary && (
                 <>
                     {/* Resultado del último cierre */}
                     {closeResult && (
@@ -234,110 +260,156 @@ export default function CajaPage() {
                         </div>
                     )}
 
-                    {/* KPI Cards del turno */}
-                    {summary && (
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
-                                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Cobrado este turno</p>
-                                <p className="text-3xl font-bold text-primary">{formatCents(summary.expected_cash_cents)}</p>
-                                <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                    {!summary.shift_id ? (
+                        // MODO: CAJA CERRADA
+                        <div className="flex flex-col items-center justify-center p-12 bg-surface/30 border border-dashed border-border rounded-2xl">
+                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                <span className="text-2xl">🔒</span>
                             </div>
-                            <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
-                                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Pagos registrados</p>
-                                <p className="text-3xl font-bold text-foreground">{summary.payment_count}</p>
-                                <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
-                            </div>
-                            <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30 col-span-2 lg:col-span-1">
-                                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Inicio de turno</p>
-                                <p className="text-lg font-semibold text-foreground">
-                                    {summary.opened_at
-                                        ? new Date(summary.opened_at).toLocaleString('es-AR', {
-                                              day: '2-digit',
-                                              month: '2-digit',
-                                              hour: '2-digit',
-                                              minute: '2-digit',
-                                          })
-                                        : '—'}
-                                </p>
-                                <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
-                            </div>
+                            <h3 className="text-lg font-semibold text-foreground mb-2">La caja está cerrada</h3>
+                            <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
+                                Para comenzar a registrar cobros en efectivo, necesitas abrir el turno de caja.
+                            </p>
+                            
+                            {!showOpen ? (
+                                <Button onClick={() => setShowOpen(true)} size="lg" className="px-8">
+                                    Abrir turno de caja
+                                </Button>
+                            ) : (
+                                <Card className="p-6 w-full max-w-md">
+                                    <form onSubmit={handleOpen} className="space-y-4">
+                                        <div className="space-y-2 text-left">
+                                            <Label htmlFor="opening-fund">Fondo inicial en gaveta ($)</Label>
+                                            <Input
+                                                id="opening-fund"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={openingFund}
+                                                onChange={(e) => setOpeningFund(e.target.value)}
+                                                placeholder="Ej: 3000 (Opcional)"
+                                            />
+                                            <p className="text-xs text-muted-foreground">Dinero base para dar cambio</p>
+                                        </div>
+                                        <div className="flex gap-3 pt-2">
+                                            <Button type="submit" disabled={opening} className="flex-1">
+                                                {opening ? 'Abriendo...' : 'Confirmar Apertura'}
+                                            </Button>
+                                            <Button type="button" onClick={() => setShowOpen(false)} variant="secondary">
+                                                Cancelar
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </Card>
+                            )}
                         </div>
-                    )}
-
-                    {/* Formulario de cierre */}
-                    {!showClose ? (
-                        <button
-                            onClick={() => setShowClose(true)}
-                            className="w-full rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-5 text-center text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all duration-200 text-sm font-medium"
-                        >
-                            Cerrar turno y rendir caja
-                        </button>
                     ) : (
-                        <Card className="p-6">
-                            <div className="flex items-center justify-between mb-5">
-                                <div>
-                                    <h3 className="text-foreground font-semibold">Cierre de turno</h3>
-                                    <p className="text-muted-foreground text-sm mt-0.5">
-                                        El sistema registró{' '}
-                                        <span className="text-primary font-medium">
-                                            {summary ? formatCents(summary.expected_cash_cents) : '—'}
-                                        </span>{' '}
-                                        en cobros.
+                        // MODO: CAJA ABIERTA
+                        <>
+                            {/* KPI Cards del turno */}
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
+                                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Cobrado este turno</p>
+                                    <p className="text-3xl font-bold text-primary">{formatCents(summary.expected_cash_cents)}</p>
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                                </div>
+                                <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
+                                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Pagos registrados</p>
+                                    <p className="text-3xl font-bold text-foreground">{summary.payment_count}</p>
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                                </div>
+                                <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30 col-span-2 lg:col-span-1">
+                                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Inicio de turno</p>
+                                    <p className="text-lg font-semibold text-foreground">
+                                        {summary.opened_at
+                                            ? new Date(summary.opened_at).toLocaleString('es-AR', {
+                                                  day: '2-digit',
+                                                  month: '2-digit',
+                                                  hour: '2-digit',
+                                                  minute: '2-digit',
+                                              })
+                                            : '—'}
                                     </p>
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
                                 </div>
-                                <button
-                                    onClick={() => setShowClose(false)}
-                                    className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-                                >
-                                    Cancelar
-                                </button>
                             </div>
-                            <form onSubmit={handleClose} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="opening-cash">Fondo inicial en gaveta ($)</Label>
-                                    <Input
-                                        id="opening-cash"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={openingCash}
-                                        onChange={(e) => setOpeningCash(e.target.value)}
-                                        placeholder="Ej: 3000 (opcional)"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="actual-cash">Efectivo real en mano ($) *</Label>
-                                    <Input
-                                        id="actual-cash"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={actualCash}
-                                        onChange={(e) => setActualCash(e.target.value)}
-                                        required
-                                        placeholder="Ej: 48000"
-                                    />
-                                </div>
-                                <div className="sm:col-span-2 space-y-1">
-                                    <Label htmlFor="close-note">Nota (obligatoria si hay descuadre)</Label>
-                                    <Input
-                                        id="close-note"
-                                        type="text"
-                                        value={closeNote}
-                                        onChange={(e) => setCloseNote(e.target.value)}
-                                        placeholder="Ej: Pagué al sodero, sobraron $500..."
-                                    />
-                                </div>
-                                <div className="sm:col-span-2 flex gap-3 pt-1">
-                                    <Button type="submit" disabled={closing} className="flex-1">
-                                        {closing ? 'Cerrando...' : 'Confirmar cierre de turno'}
-                                    </Button>
-                                    <Button type="button" onClick={() => setShowClose(false)} variant="secondary">
-                                        Cancelar
-                                    </Button>
-                                </div>
-                            </form>
-                        </Card>
+
+                            {/* Formulario de cierre */}
+                            {!showClose ? (
+                                <button
+                                    onClick={() => setShowClose(true)}
+                                    className="w-full rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-5 text-center text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all duration-200 text-sm font-medium"
+                                >
+                                    Cerrar turno y rendir caja
+                                </button>
+                            ) : (
+                                <Card className="p-6">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div>
+                                            <h3 className="text-foreground font-semibold">Cierre de turno</h3>
+                                            <p className="text-muted-foreground text-sm mt-0.5">
+                                                El sistema registró{' '}
+                                                <span className="text-primary font-medium">
+                                                    {formatCents(summary.expected_cash_cents)}
+                                                </span>{' '}
+                                                en cobros.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowClose(false)}
+                                            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                    <form onSubmit={handleClose} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="opening-cash">Fondo inicial en gaveta ($)</Label>
+                                            <Input
+                                                id="opening-cash"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={openingCash}
+                                                onChange={(e) => setOpeningCash(e.target.value)}
+                                                placeholder="Ej: 3000 (opcional)"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="actual-cash">Efectivo real en mano ($) *</Label>
+                                            <Input
+                                                id="actual-cash"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={actualCash}
+                                                onChange={(e) => setActualCash(e.target.value)}
+                                                required
+                                                placeholder="Ej: 48000"
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-2 space-y-1">
+                                            <Label htmlFor="close-note">Nota (obligatoria si hay descuadre)</Label>
+                                            <Input
+                                                id="close-note"
+                                                type="text"
+                                                value={closeNote}
+                                                onChange={(e) => setCloseNote(e.target.value)}
+                                                placeholder="Ej: Pagué al sodero, sobraron $500..."
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-2 flex gap-3 pt-1">
+                                            <Button type="submit" disabled={closing} className="flex-1">
+                                                {closing ? 'Cerrando...' : 'Confirmar cierre de turno'}
+                                            </Button>
+                                            <Button type="button" onClick={() => setShowClose(false)} variant="secondary">
+                                                Cancelar
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </Card>
+                            )}
+                        </>
                     )}
                 </>
             )}
