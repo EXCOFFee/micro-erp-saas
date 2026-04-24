@@ -38,11 +38,16 @@ async function bootstrap() {
    * Si no está definido pero estamos en development, permite localhost.
    * Si no está definido en production, RECHAZA todo por defecto.
    */
+  const rawFrontendUrl = (process.env.FRONTEND_URL || '').trim();
+  const frontendUrl = rawFrontendUrl.endsWith('/')
+    ? rawFrontendUrl.slice(0, -1)
+    : rawFrontendUrl;
+
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL
-        : process.env.FRONTEND_URL || 'http://localhost:3001',
+        ? frontendUrl
+        : frontendUrl || 'http://localhost:3001',
     credentials: true,
   });
 
