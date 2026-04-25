@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export const MixedPaymentSchema = z.object({
-  cash_amount: z.coerce.number().min(0, "El monto no puede ser negativo"),
-  transfer_amount: z.coerce.number().min(0, "El monto no puede ser negativo"),
+  cash_amount: z.number().min(0, "El monto no puede ser negativo"),
+  transfer_amount: z.number().min(0, "El monto no puede ser negativo"),
   description: z.string().optional(),
 }).refine((data) => data.cash_amount > 0 || data.transfer_amount > 0, {
   message: "Debe ingresar al menos un monto mayor a 0",
@@ -66,7 +66,7 @@ export function MixedPaymentModal({ isOpen, onClose, onSubmit, isLoading }: Mixe
                 type="number"
                 step="0.01"
                 min="0"
-                {...register('cash_amount')}
+                {...register('cash_amount', { valueAsNumber: true })}
                 disabled={isLoading}
                 className={errors.cash_amount ? 'border-destructive' : ''}
               />
@@ -80,7 +80,7 @@ export function MixedPaymentModal({ isOpen, onClose, onSubmit, isLoading }: Mixe
                 type="number"
                 step="0.01"
                 min="0"
-                {...register('transfer_amount')}
+                {...register('transfer_amount', { valueAsNumber: true })}
                 disabled={isLoading}
                 className={errors.transfer_amount ? 'border-destructive' : ''}
               />
