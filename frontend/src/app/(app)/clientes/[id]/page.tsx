@@ -373,7 +373,7 @@ export default function ClienteDetallePage() {
                                     <p className="text-foreground text-sm">{customer.notes}</p>
                                 </div>
                             )}
-                            {customer.tags && customer.tags.length > 0 && (
+                            {Array.isArray(customer.tags) && customer.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-2">
                                     {customer.tags.map((tag) => (
                                         <span key={tag} className="px-2 py-0.5 rounded text-xs bg-border text-foreground">{tag}</span>
@@ -634,7 +634,7 @@ export default function ClienteDetallePage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {transactions.map((tx) => {
+                            {Array.isArray(transactions) && transactions.map((tx) => {
                                 const typeInfo = txTypeLabels[tx.type] || { label: tx.type, color: 'text-muted-foreground' };
                                 return (
                                     <tr key={tx.id} className={`hover:bg-muted/30 transition-colors ${tx.is_reversed ? 'opacity-40 line-through' : ''}`}>
@@ -659,7 +659,7 @@ export default function ClienteDetallePage() {
                                     </tr>
                                 );
                             })}
-                            {transactions.length === 0 && (
+                            {(!Array.isArray(transactions) || transactions.length === 0) && (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground text-sm">Sin transacciones</td>
                                 </tr>
