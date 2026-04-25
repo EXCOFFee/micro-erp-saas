@@ -38,10 +38,35 @@ async function bootstrap() {
    * Si no está definido pero estamos en development, permite localhost.
    * Si no está definido en production, RECHAZA todo por defecto.
    */
-  const rawFrontendUrl = (process.env.FRONTEND_URL || '').trim();
-  const frontendUrl = rawFrontendUrl.endsWith('/')
-    ? rawFrontendUrl.slice(0, -1)
-    : rawFrontendUrl;
+  /**
+   * Validación Autónoma de Infraestructura (DevSecOps)
+   */
+  const rawFrontendUrl = process.env.FRONTEND_URL;
+  if (process.env.NODE_ENV === 'production') {
+    if (!rawFrontendUrl) {
+      console.error(
+        '[FATAL] FRONTEND_URL is not defined in production environment.',
+      );
+      process.exit(1);
+    }
+    try {
+      const parsedUrl = new URL(rawFrontendUrl);
+      if (parsedUrl.protocol !== 'https:') {
+        console.error('[FATAL] FRONTEND_URL must enforce HTTPS in production.');
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(
+        `[FATAL] FRONTEND_URL is malformed. Received: ${rawFrontendUrl}`,
+      );
+      process.exit(1);
+    }
+  }
+
+  const cleanFrontendUrl = (rawFrontendUrl || '').trim();
+  const frontendUrl = cleanFrontendUrl.endsWith('/')
+    ? cleanFrontendUrl.slice(0, -1)
+    : cleanFrontendUrl;
 
   app.enableCors({
     origin:
