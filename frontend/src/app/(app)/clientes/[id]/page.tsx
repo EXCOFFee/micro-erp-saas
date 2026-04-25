@@ -13,26 +13,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TicketPreview } from '@/components/TicketPreview';
 import type { TicketPreviewProps } from '@/components/TicketPreview';
+import { MixedPaymentModal } from '@/components/modals/MixedPaymentModal';
+import { DebtForgivenessModal } from '@/components/modals/DebtForgivenessModal';
 
-/**
- * Detalle de Cliente — Perfil completo con acciones y transacciones.
- *
- * Endpoints consumidos:
- * - GET /customers/:id
- * - GET /transactions/customer/:id
- * - PATCH /customers/:id/block
- * - PATCH /customers/:id/promise
- * - PATCH /customers/:id/credit-limit (ADMIN)
- * - POST /notifications/summary-link/:id
- * - POST /transactions (deuda/pago)
- * - POST /transactions/reverse
- */
 export default function ClienteDetallePage() {
     const params = useParams();
     const router = useRouter();
     const { isAdmin, user } = useAuth();
     const id = params.id as string;
 
+    const [mounted, setMounted] = useState(false);
     const [customer, setCustomer] = useState<Customer | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -48,6 +38,10 @@ export default function ClienteDetallePage() {
     const [showCreditLimit, setShowCreditLimit] = useState(false);
     const [shareLink, setShareLink] = useState('');
 
+    // Modals
+    const [showMixedPayment, setShowMixedPayment] = useState(false);
+    const [showDebtForgiveness, setShowDebtForgiveness] = useState(false);
+
     // Edit panel state
     const [showEdit, setShowEdit] = useState(false);
     const [editName, setEditName] = useState('');
@@ -56,11 +50,15 @@ export default function ClienteDetallePage() {
     const [editAddress, setEditAddress] = useState('');
     const [editEmail, setEditEmail] = useState('');
     const [editNotes, setEditNotes] = useState('');
-    const [editTags, setEditTags] = useState(''); // CSV string, split on save
+    const [editTags, setEditTags] = useState(''); 
     const [editSaved, setEditSaved] = useState(false);
 
     // Ticket modal state
     const [ticketData, setTicketData] = useState<TicketPreviewProps | null>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const loadData = useCallback(async () => {
         try {
@@ -86,7 +84,6 @@ export default function ClienteDetallePage() {
         loadData();
     }, [loadData]);
 
-    /** Abre el panel de edición pre-poblando los campos con los valores actuales del cliente. */
     function openEditPanel(c: Customer) {
         setEditName(c.full_name);
         setEditPhone(c.phone ?? '');
@@ -99,7 +96,6 @@ export default function ClienteDetallePage() {
         setShowEdit(true);
     }
 
-    /** Envía PATCH /customers/:id con los datos del formulario de edición. */
     async function handleEditSave(e: React.FormEvent) {
         e.preventDefault();
         setActionLoading('edit');
@@ -111,7 +107,6 @@ export default function ClienteDetallePage() {
                 address: editAddress.trim() || null,
                 email: editEmail.trim() || null,
                 notes: editNotes.trim() || null,
-                // Convertir el string "VIP, moroso" a array ["VIP", "moroso"]
                 tags: editTags.trim()
                     ? editTags.split(',').map((t) => t.trim()).filter(Boolean)
                     : null,
@@ -126,8 +121,6 @@ export default function ClienteDetallePage() {
             setActionLoading('');
         }
     }
-
-    // ─── ACCIONES ────────────────────────────────────────────────
 
     async function handleToggleBlock() {
         setActionLoading('block');
@@ -185,12 +178,10 @@ export default function ClienteDetallePage() {
             const fullLink = window.location.origin + response.data.link;
             setShareLink(fullLink);
 
-            // Copiar al portapapeles
             if (navigator.clipboard) {
                 await navigator.clipboard.writeText(fullLink).catch(() => {});
             }
 
-            // Abrir WhatsApp con mensaje pre-armado
             const name = customer?.full_name ?? 'cliente';
             const balance = formatCents(customer?.balance_cents ?? 0);
             const msg = encodeURIComponent(
@@ -210,9 +201,6 @@ export default function ClienteDetallePage() {
         setActionLoading('tx');
         try {
             const amountCents = Math.round(parseFloat(txAmount) * 100);
-            // El backend tiene endpoints separados por tipo:
-            // POST /transactions/debt  → registrar fiado
-            // POST /transactions/payment → registrar pago
             const endpoint = type === 'DEBT' ? '/transactions/debt' : '/transactions/payment';
             const txResponse = await api.post<{ id: string; customer_id: string; amount_cents: number; created_at: string }>(endpoint, {
                 customer_id: id,
@@ -226,7 +214,6 @@ export default function ClienteDetallePage() {
             setTxDescription('');
             await loadData();
 
-            // Generar magic link y mostrar ticket
             try {
                 const linkRes = await api.post<{ link: string }>(`/notifications/summary-link/${id}`);
                 const magicUrl = window.location.origin + linkRes.data.link;
@@ -244,7 +231,6 @@ export default function ClienteDetallePage() {
                     description: descCopy || undefined,
                 });
             } catch {
-                // Si falla el magic link, mostramos el ticket igual con URL placeholder
                 setTicketData({
                     tenantName: 'MI COMERCIO',
                     date: txResponse.data.created_at || new Date().toISOString(),
@@ -266,11 +252,48 @@ export default function ClienteDetallePage() {
         }
     }
 
+    async function handleMixedPayment(payload: { cash_cents: number; transfer_cents: number; description?: string }, idempotencyKey: string) {
+        setActionLoading('mixed');
+        try {
+            await api.post(`/transactions/payment/mixed`, {
+                customer_id: id,
+                ...payload,
+                idempotency_key: idempotencyKey,
+            });
+            setShowMixedPayment(false);
+            await loadData();
+            alert('Pago mixto registrado con éxito.');
+        } catch (err) {
+            if (err instanceof AxiosError && err.response?.data?.message) alert(err.response.data.message);
+            else alert(err instanceof Error ? err.message : 'Error');
+        } finally {
+            setActionLoading('');
+        }
+    }
+
+    async function handleDebtForgiveness(payload: { reason: string; action_type: 'WRITEOFF' | 'EXCHANGE' | 'DISCOUNT' }, idempotencyKey: string) {
+        setActionLoading('forgive');
+        try {
+            await api.post(`/transactions/forgive`, {
+                customer_id: id,
+                ...payload,
+                idempotency_key: idempotencyKey,
+            });
+            setShowDebtForgiveness(false);
+            await loadData();
+            alert('Deuda condonada con éxito.');
+        } catch (err) {
+            if (err instanceof AxiosError && err.response?.data?.message) alert(err.response.data.message);
+            else alert(err instanceof Error ? err.message : 'Error');
+        } finally {
+            setActionLoading('');
+        }
+    }
+
     async function handleReverse(txId: string) {
         if (!confirm('¿Seguro que querés revertir esta transacción?')) return;
         setActionLoading(`reverse-${txId}`);
         try {
-            // El backend espera: POST /transactions/:id/reverse
             await api.post(`/transactions/${txId}/reverse`, {
                 idempotency_key: crypto.randomUUID(),
             });
@@ -315,15 +338,12 @@ export default function ClienteDetallePage() {
 
     return (
         <div className="space-y-6">
-            {/* Header con botón volver */}
             <button onClick={() => router.push('/clientes')} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Volver a clientes
             </button>
 
-            {/* Perfil del cliente y Resumen Financiero */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Info del Cliente */}
                 <Card className="p-6 lg:col-span-1 flex flex-col justify-between">
                     <div>
                         <div className="flex items-start justify-between gap-2">
@@ -345,7 +365,7 @@ export default function ClienteDetallePage() {
                             {customer.address && <p>Dirección: {customer.address}</p>}
                             {customer.email && <p>Email: {customer.email}</p>}
                             {customer.next_payment_promise && (
-                                <p className="text-primary/90 font-medium">Promesa de pago: {formatDateShort(customer.next_payment_promise)}</p>
+                                <p className="text-primary/90 font-medium">Promesa de pago: {mounted ? formatDateShort(customer.next_payment_promise) : ''}</p>
                             )}
                             {customer.notes && (
                                 <div className="mt-3 p-3 rounded-lg bg-muted/30 border border-border">
@@ -363,7 +383,6 @@ export default function ClienteDetallePage() {
                         </div>
                     </div>
 
-                    {/* Action buttons (Secondary) */}
                     <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-border">
                         <Button variant="secondary" size="sm" onClick={() => openEditPanel(customer)} disabled={actionLoading === 'edit'}>
                             Editar
@@ -385,26 +404,24 @@ export default function ClienteDetallePage() {
                     </div>
                 </Card>
 
-                {/* Tarjetas Gigantes */}
                 <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="group relative overflow-hidden rounded-2xl bg-surface p-6 border border-border transition-all duration-300 ease-out hover:border-primary/30 hover:bg-surface/80 flex flex-col justify-center">
                         <p className="text-muted-foreground text-sm font-medium mb-2 uppercase tracking-wide">Saldo Actual</p>
                         <p className={`text-4xl lg:text-5xl font-bold tracking-tight truncate ${customer.balance_cents > 0 ? 'text-destructive' : 'text-primary'}`}>
-                            {formatCents(customer.balance_cents)}
+                            {mounted ? formatCents(customer.balance_cents) : ''}
                         </p>
                         <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
                     </div>
                     <div className="group relative overflow-hidden rounded-2xl bg-surface p-6 border border-border transition-all duration-300 ease-out hover:border-primary/30 hover:bg-surface/80 flex flex-col justify-center">
                         <p className="text-muted-foreground text-sm font-medium mb-2 uppercase tracking-wide">Límite de Crédito</p>
                         <p className="text-4xl lg:text-5xl font-bold tracking-tight text-foreground truncate">
-                            {formatCents(customer.credit_limit_cents)}
+                            {mounted ? formatCents(customer.credit_limit_cents) : ''}
                         </p>
                         <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
                     </div>
                 </div>
             </div>
 
-            {/* Panel de edición de datos del cliente */}
             {showEdit && (
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-5">
@@ -465,7 +482,6 @@ export default function ClienteDetallePage() {
                 </Card>
             )}
 
-            {/* Share link result */}
             {shareLink && (
                 <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4">
                     <p className="text-foreground text-sm truncate">{shareLink}</p>
@@ -475,7 +491,6 @@ export default function ClienteDetallePage() {
                 </div>
             )}
 
-            {/* Cajero Virtual Form */}
             <Card className="p-6 relative overflow-hidden">
                 <h2 className="text-lg font-semibold text-foreground mb-5 flex items-center gap-2 relative z-10">
                     <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
@@ -490,7 +505,7 @@ export default function ClienteDetallePage() {
                             min="0.01"
                             value={txAmount}
                             onChange={(e) => setTxAmount(e.target.value)}
-                            placeholder="Monto de la transacción (Ej: 1500.50)"
+                            placeholder="Monto de la transacción"
                             disabled={actionLoading === 'tx'}
                         />
                         <Input
@@ -501,14 +516,14 @@ export default function ClienteDetallePage() {
                             disabled={actionLoading === 'tx'}
                         />
                     </div>
-                    <div className="flex flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                         <Button
                             type="button"
                             onClick={() => submitTx('DEBT')}
                             disabled={actionLoading === 'tx' || !txAmount}
                             className="bg-[oklch(0.60_0.15_40)] text-white hover:bg-[oklch(0.55_0.15_40)] shadow-none flex-1 lg:px-6"
                         >
-                            {actionLoading === 'tx' ? 'Procesando...' : 'Registrar Deuda'}
+                            {actionLoading === 'tx' ? '...' : 'Fiado'}
                         </Button>
                         <Button
                             type="button"
@@ -516,20 +531,38 @@ export default function ClienteDetallePage() {
                             disabled={actionLoading === 'tx' || !txAmount}
                             className="flex-1 lg:px-6 shadow-none"
                         >
-                            {actionLoading === 'tx' ? 'Procesando...' : 'Registrar Pago'}
+                            {actionLoading === 'tx' ? '...' : 'Pago'}
                         </Button>
                     </div>
                 </div>
+
+                <div className="mt-6 pt-4 border-t border-border flex flex-wrap gap-3 relative z-10">
+                    <Button 
+                        type="button" 
+                        variant="secondary"
+                        onClick={() => setShowMixedPayment(true)}
+                        className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-600 border border-emerald-500/20"
+                    >
+                        Pago Mixto (Efectivo + Transferencia)
+                    </Button>
+                    
+                    {isAdmin && (
+                        <Button 
+                            type="button" 
+                            variant="secondary"
+                            onClick={() => setShowDebtForgiveness(true)}
+                            className="bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 ml-auto"
+                        >
+                            Condonar Deuda
+                        </Button>
+                    )}
+                </div>
             </Card>
 
-            {/* ── Modal de Ticket (éxito post-transacción) ──────────────── */}
             {ticketData && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm print:bg-transparent print:backdrop-blur-none">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto print:shadow-none print:rounded-none print:max-w-none print:mx-0">
-                        {/* Preview del ticket */}
                         <TicketPreview {...ticketData} />
-
-                        {/* Botones de acción (ocultos en impresión) */}
                         <div className="flex gap-3 p-4 border-t border-gray-200 print:hidden">
                             <button
                                 onClick={() => window.print()}
@@ -548,7 +581,6 @@ export default function ClienteDetallePage() {
                 </div>
             )}
 
-            {/* Promise form */}
             {showPromise && (
                 <Card className="p-6">
                     <h3 className="text-foreground font-semibold mb-4">Registrar promesa de pago</h3>
@@ -566,7 +598,6 @@ export default function ClienteDetallePage() {
                 </Card>
             )}
 
-            {/* Credit limit form (ADMIN) */}
             {showCreditLimit && isAdmin && (
                 <Card className="p-6">
                     <h3 className="text-foreground font-semibold mb-4">Cambiar límite de crédito</h3>
@@ -587,7 +618,6 @@ export default function ClienteDetallePage() {
                 </Card>
             )}
 
-            {/* Historial de transacciones */}
             <Card className="overflow-hidden">
                 <div className="px-6 py-4 border-b border-border bg-muted/10">
                     <h2 className="text-lg font-semibold text-foreground">Historial</h2>
@@ -608,11 +638,11 @@ export default function ClienteDetallePage() {
                                 const typeInfo = txTypeLabels[tx.type] || { label: tx.type, color: 'text-muted-foreground' };
                                 return (
                                     <tr key={tx.id} className={`hover:bg-muted/30 transition-colors ${tx.is_reversed ? 'opacity-40 line-through' : ''}`}>
-                                        <td className="px-6 py-3.5 text-sm text-foreground">{formatDate(tx.created_at)}</td>
+                                        <td className="px-6 py-3.5 text-sm text-foreground">{mounted ? formatDate(tx.created_at) : ''}</td>
                                         <td className="px-6 py-3.5">
                                             <span className={`text-sm font-medium ${typeInfo.color}`}>{typeInfo.label}</span>
                                         </td>
-                                        <td className="px-6 py-3.5 text-right text-sm font-semibold text-foreground">{formatCents(tx.amount_cents)}</td>
+                                        <td className="px-6 py-3.5 text-right text-sm font-semibold text-foreground">{mounted ? formatCents(tx.amount_cents) : ''}</td>
                                         <td className="px-6 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{tx.description || '—'}</td>
                                         <td className="px-6 py-3.5 text-center">
                                             {!tx.is_reversed && (tx.type === 'DEBT' || tx.type === 'PAYMENT') && (
@@ -638,6 +668,21 @@ export default function ClienteDetallePage() {
                     </table>
                 </div>
             </Card>
+
+            <MixedPaymentModal 
+                isOpen={showMixedPayment}
+                onClose={() => setShowMixedPayment(false)}
+                onSubmit={handleMixedPayment}
+                isLoading={actionLoading === 'mixed'}
+            />
+
+            <DebtForgivenessModal 
+                isOpen={showDebtForgiveness}
+                onClose={() => setShowDebtForgiveness(false)}
+                onSubmit={handleDebtForgiveness}
+                isLoading={actionLoading === 'forgive'}
+                currentDebtCents={customer.balance_cents}
+            />
         </div>
     );
 }
