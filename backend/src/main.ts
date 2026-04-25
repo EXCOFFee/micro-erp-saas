@@ -55,7 +55,7 @@ async function bootstrap() {
         console.error('[FATAL] FRONTEND_URL must enforce HTTPS in production.');
         process.exit(1);
       }
-    } catch (error) {
+    } catch {
       console.error(
         `[FATAL] FRONTEND_URL is malformed. Received: ${rawFrontendUrl}`,
       );
