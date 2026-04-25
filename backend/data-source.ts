@@ -7,6 +7,8 @@ import { Transaction } from './src/modules/transactions/entities/transaction.ent
 import { CashRegisterLog } from './src/modules/cash-register/entities/cash-register-log.entity';
 import { AuditLog } from './src/modules/audit/entities/audit-log.entity';
 
+import { BillingEvent } from './src/modules/billing/entities/billing-event.entity';
+
 /**
  * Carga de variables de entorno para usar la CLI de TypeORM.
  * En NestJS esto lo hace ConfigModule, pero el CLI de TypeORM
@@ -22,7 +24,7 @@ export const AppDataSource = new DataSource({
    * corren fuera del contexto de NestJS. Hay que proveer la ruta
    * absoluta a las entidades o listarlas explícitamente.
    */
-  entities: [Customer, Tenant, User, Transaction, CashRegisterLog, AuditLog],
+  entities: [Customer, Tenant, User, Transaction, CashRegisterLog, AuditLog, BillingEvent],
   migrations: ['src/database/migrations/*.ts'],
   ssl: {
     rejectUnauthorized: false,
