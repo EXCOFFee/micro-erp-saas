@@ -110,6 +110,9 @@ export class User {
   @Column({ type: 'int', default: 0 })
   token_version: number;
 
+  @Column({ type: 'timestamp', nullable: true })
+  password_changed_at: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 

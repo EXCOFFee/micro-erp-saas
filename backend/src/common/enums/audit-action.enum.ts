@@ -79,4 +79,9 @@ export enum AuditAction {
    * El Admin reactivó la cuenta de un empleado (CU-SAAS-03).
    */
   ACTIVATE_USER = 'ACTIVATE_USER',
+
+  /**
+   * Un usuario ejecutó recuperación/cambio de contraseña por flujo seguro (CU-SAAS-05).
+   */
+  RESET_PASSWORD = 'RESET_PASSWORD',
 }

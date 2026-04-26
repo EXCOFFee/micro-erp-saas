@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
 import { authService, LoginDto } from '@/lib/auth.service';
@@ -104,6 +105,15 @@ export default function LoginPage() {
               />
             </div>
 
+            <div className="text-right text-sm">
+              <Link
+                href="/forgot-password"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+
             <div className="pt-4">
               <Button
                 type="submit"
@@ -122,6 +132,16 @@ export default function LoginPage() {
                   'Iniciar Sesión'
                 )}
               </Button>
+            </div>
+
+            <div className="pt-2 text-center text-sm text-muted-foreground">
+              ¿Aún no tienes cuenta?{' '}
+              <Link
+                href="/register"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Registrar comercio
+              </Link>
             </div>
           </form>
         </CardContent>

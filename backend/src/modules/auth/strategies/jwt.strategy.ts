@@ -70,7 +70,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
      */
     const user = await this.userRepository.findOne({
       where: { id: payload.sub },
-      select: ['id', 'tenant_id', 'role', 'is_active', 'token_version'],
+      select: [
+        'id',
+        'tenant_id',
+        'role',
+        'is_active',
+        'token_version',
+        'password_changed_at',
+      ],
     });
 
     if (!user) {
@@ -95,6 +102,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
      */
     if (!user.is_active) {
       throw new UnauthorizedException('Cuenta desactivada');
+    }
+
+    // Kill Switch de recuperación de credenciales: invalida sesiones previas al reset.
+    if (user.password_changed_at && typeof payload.iat === 'number') {
+      const tokenIssuedAt = new Date(payload.iat * 1000);
+      if (tokenIssuedAt < user.password_changed_at) {
+        throw new UnauthorizedException(
+          'Sesión invalidada por cambio de credenciales de seguridad',
+        );
+      }
     }
 
     /**

@@ -65,4 +65,10 @@ export interface JwtPayload {
    * Se actualiza al generar un nuevo JWT tras pagar vía webhook.
    */
   sub_expires_at: number;
+
+  /**
+   * Issued At estándar JWT en epoch seconds.
+   * Se usa para invalidar sesiones cuando password_changed_at es más reciente.
+   */
+  iat?: number;
 }

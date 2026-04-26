@@ -94,3 +94,5 @@ export async function apiBlob(endpoint: string): Promise<Blob> {
   });
   return response.data;
 }
+
+export default api;

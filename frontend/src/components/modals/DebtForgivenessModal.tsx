@@ -56,15 +56,15 @@ export function DebtForgivenessModal({ isOpen, onClose, onSubmit, isLoading, cur
             <div className="space-y-2">
               <Label htmlFor="action_type">Tipo de Condonación</Label>
               <select
-                id="action_type"
-                {...register('action_type')}
-                disabled={isLoading}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="WRITEOFF">Incobrable (Pérdida)</option>
-                <option value="EXCHANGE">Canje (Intercambio de bienes/servicios)</option>
-                <option value="DISCOUNT">Descuento Especial</option>
-              </select>
+              id="action_type"
+              {...register('action_type')}
+              className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isLoading}
+            >
+              <option value="WRITEOFF" className="bg-background text-foreground">Incobrable (Pérdida)</option>
+              <option value="EXCHANGE" className="bg-background text-foreground">Canje (Intercambio de bienes/servicios)</option>
+              <option value="DISCOUNT" className="bg-background text-foreground">Descuento Especial</option>
+            </select>
               {errors.action_type && <p className="text-xs text-destructive">{errors.action_type.message}</p>}
             </div>
 

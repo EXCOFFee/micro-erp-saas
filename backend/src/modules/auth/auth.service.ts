@@ -3,17 +3,36 @@ import {
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
+  Inject,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { InjectQueue } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import type { Cache } from 'cache-manager';
+import { Queue } from 'bullmq';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Tenant } from '../tenants/entities/tenant.entity';
 import { User } from '../users/entities/user.entity';
+import { AuditAction } from '../../common/enums/audit-action.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { TenantStatus } from '../../common/enums/tenant-status.enum';
+import { AuditService } from '../audit/audit.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { PasswordResetEmailJob } from './queues/password-reset-email.processor';
+
+interface ResetTokenPayload {
+  sub: string;
+  purpose: 'pwd_reset';
+  iat: number;
+}
 
 /**
  * AuthService — Lógica de negocio para registro y autenticación.
@@ -29,6 +48,8 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
  */
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   /**
    * Rondas de hasheo para bcrypt.
    * 10 rondas es el estándar recomendado — balance entre seguridad
@@ -40,6 +61,12 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+    @InjectQueue('email')
+    private readonly emailQueue: Queue<PasswordResetEmailJob>,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -210,5 +237,164 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     return { access_token: accessToken };
+  }
+
+  async requestPasswordReset(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    const { email } = forgotPasswordDto;
+
+    const user = await this.dataSource.getRepository(User).findOne({
+      where: { email },
+      select: ['id', 'email'],
+    });
+
+    const successMessage =
+      'Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.';
+
+    if (!user) {
+      // Mitigación de timing attack para no filtrar existencia de cuentas.
+      await bcrypt.hash(email, this.BCRYPT_ROUNDS);
+      return { message: successMessage };
+    }
+
+    const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
+    if (!resetSecret) {
+      throw new InternalServerErrorException(
+        'Configuración de seguridad incompleta para recuperación de contraseña',
+      );
+    }
+
+    const payload = { sub: user.id, purpose: 'pwd_reset' as const };
+    const resetToken = this.jwtService.sign(payload, {
+      secret: resetSecret,
+      expiresIn: '15m',
+    });
+
+    try {
+      await this.emailQueue.add(
+        'send-reset-email',
+        {
+          email: user.email,
+          token: resetToken,
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: 1000,
+          removeOnFail: 5000,
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `No se pudo encolar email de recuperación para ${email}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return { message: successMessage };
+  }
+
+  async executePasswordReset(
+    resetPasswordDto: ResetPasswordDto,
+    idempotencyKey: string,
+  ): Promise<{ message: string }> {
+    const cacheKey = `idemp_reset_${idempotencyKey}`;
+    const isDuplicate = await this.cacheManager.get<boolean>(cacheKey);
+
+    if (isDuplicate) {
+      return { message: 'Contraseña actualizada correctamente' };
+    }
+
+    let payload: ResetTokenPayload;
+    try {
+      const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
+      if (!resetSecret) {
+        throw new Error('JWT_RESET_SECRET no configurado');
+      }
+
+      payload = this.jwtService.verify<ResetTokenPayload>(
+        resetPasswordDto.token,
+        {
+          secret: resetSecret,
+        },
+      );
+    } catch {
+      throw new UnauthorizedException(
+        'El enlace de seguridad es inválido o ha expirado',
+      );
+    }
+
+    if (payload.purpose !== 'pwd_reset') {
+      throw new UnauthorizedException('Uso indebido de token de seguridad');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: payload.sub },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
+
+      if (user.password_changed_at) {
+        const tokenIssuedAt = new Date(payload.iat * 1000);
+        if (tokenIssuedAt < user.password_changed_at) {
+          throw new UnauthorizedException(
+            'Este enlace ya fue utilizado y está anulado',
+          );
+        }
+      }
+
+      const previousPasswordChangedAt = user.password_changed_at;
+      user.password_hash = await bcrypt.hash(
+        resetPasswordDto.new_password,
+        this.BCRYPT_ROUNDS,
+      );
+      user.password_changed_at = new Date();
+      user.token_version += 1;
+
+      await queryRunner.manager.save(user);
+
+      await this.auditService.log({
+        tenantId: user.tenant_id,
+        userId: user.id,
+        action: AuditAction.RESET_PASSWORD,
+        entityType: 'User',
+        entityId: user.id,
+        oldValue: {
+          password_changed_at: previousPasswordChangedAt
+            ? previousPasswordChangedAt.toISOString()
+            : null,
+        },
+        newValue: {
+          password_changed_at: user.password_changed_at.toISOString(),
+        },
+        ipAddress: null,
+      });
+
+      await queryRunner.commitTransaction();
+      await this.cacheManager.set(cacheKey, true, 3600000);
+
+      return { message: 'Contraseña actualizada correctamente' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error crítico al procesar la actualización de credenciales',
+      );
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

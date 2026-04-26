@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
+import { BullModule } from '@nestjs/bullmq';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -6,8 +8,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { PasswordResetEmailProcessor } from './queues/password-reset-email.processor';
 import { User } from '../users/entities/user.entity';
 import { Tenant } from '../tenants/entities/tenant.entity';
+import { AuditModule } from '../audit/audit.module';
 
 /**
  * AuthModule — Módulo de autenticación y autorización.
@@ -24,6 +28,34 @@ import { Tenant } from '../tenants/entities/tenant.entity';
 @Module({
   imports: [
     PassportModule,
+    CacheModule.register(),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+
+        if (redisUrl) {
+          return {
+            connection: {
+              url: redisUrl,
+            },
+          };
+        }
+
+        return {
+          connection: {
+            host: configService.get<string>('REDIS_HOST') || '127.0.0.1',
+            port: Number(configService.get<string>('REDIS_PORT') || 6379),
+            password: configService.get<string>('REDIS_PASSWORD') || undefined,
+          },
+        };
+      },
+    }),
+    BullModule.registerQueue({
+      name: 'email',
+    }),
+    AuditModule,
 
     /**
      * JwtModule configurado con secreto desde variables de entorno.
@@ -54,7 +86,7 @@ import { Tenant } from '../tenants/entities/tenant.entity';
     TypeOrmModule.forFeature([User, Tenant]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, PasswordResetEmailProcessor],
   exports: [AuthService],
 })
 export class AuthModule {}

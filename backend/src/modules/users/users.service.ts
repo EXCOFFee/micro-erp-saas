@@ -162,6 +162,7 @@ export class UsersService {
       dto.new_password,
       this.BCRYPT_ROUNDS,
     );
+    user.password_changed_at = new Date();
     user.token_version += 1; // Invalida sesiones activas forzando re-login
 
     await this.userRepository.save(user);
