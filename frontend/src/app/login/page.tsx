@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
@@ -22,11 +22,32 @@ export default function LoginPage() {
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isWarmingUp, setIsWarmingUp] = useState(false);
+  const [showColdStartHint, setShowColdStartHint] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    setIsWarmingUp(true);
+    void authService.warmup().finally(() => {
+      if (isMounted) {
+        setIsWarmingUp(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setShowColdStartHint(false);
     setLoading(true);
+    const slowResponseTimer = window.setTimeout(() => {
+      setShowColdStartHint(true);
+    }, 6000);
 
     try {
       const response = await authService.login(formData);
@@ -34,11 +55,17 @@ export default function LoginPage() {
       // Login exitoso: Redirección limpia al dashboard
       router.push('/dashboard');
     } catch (error) {
-      setLoading(false);
       // Manejo de Errores UI: Atrapamos el error que sube desde api.ts
       if (error instanceof AxiosError) {
         if (error.response?.status === 401 || error.response?.status === 404) {
           setErrorMsg('Credenciales inválidas. Verifica tu correo electrónico y contraseña.');
+        } else if (
+          error.code === 'ECONNABORTED' ||
+          error.code === 'ERR_NETWORK'
+        ) {
+          setErrorMsg(
+            'El backend demo puede estar iniciando en Render Free Tier. Espera unos segundos e intenta nuevamente.',
+          );
         } else {
           // Errores de validación (400, 422) o de servidor (500)
           setErrorMsg(
@@ -50,6 +77,9 @@ export default function LoginPage() {
         // Errores de red (Timeout de 30s) u otros no capturados por Axios propiamente
         setErrorMsg((error as Error).message);
       }
+    } finally {
+      window.clearTimeout(slowResponseTimer);
+      setLoading(false);
     }
   };
 
@@ -72,6 +102,12 @@ export default function LoginPage() {
             {errorMsg && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md animate-fade-in font-medium">
                 {errorMsg}
+              </div>
+            )}
+
+            {loading && showColdStartHint && (
+              <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                Activando servidor de demo en infraestructura free tier. La primera solicitud puede tardar entre 30 y 90 segundos.
               </div>
             )}
 
@@ -142,6 +178,11 @@ export default function LoginPage() {
               >
                 Registrar comercio
               </Link>
+            </div>
+
+            <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+              Modo demo: usamos Vercel + Render Free Tier. Si el backend estuvo inactivo, el primer login puede demorar mientras se reactiva.
+              {isWarmingUp ? ' Preparando conexión...' : ''}
             </div>
           </form>
         </CardContent>

@@ -66,4 +66,32 @@ Antes de presionar "Deploy", expande la sección **Environment Variables** e ing
     - Ingresa a la App verificando que el Dashboard se renderice correctamente en *cero*.
     - Intenta crear un cliente nuevo.
 
+---
+
+## 🧪 5. Runbook de Demo (Free Tier)
+
+Para demos con reclutadores o stakeholders, usa este protocolo para minimizar el impacto de hibernación en Render Free.
+
+1. **Precalentar backend 1-2 minutos antes de la demo**
+    - Abre la URL del frontend y espera a que el login cargue.
+    - Realiza un intento de navegación/login para disparar el wake-up del backend.
+
+2. **Mensaje transparente en la UI de login**
+    - La pantalla de login debe informar que el primer request puede demorar por infraestructura gratuita.
+    - Evita mensajes de error ambiguos cuando la red está en timeout por cold start.
+
+3. **Keep-alive externo recomendado**
+    - Configura UptimeRobot o Better Stack contra `GET /health` cada 5-10 minutos.
+    - Endpoint de salud esperado: `https://<tu-backend>.onrender.com/health`.
+    - Alternativa sin herramientas externas: usar el workflow de GitHub Actions `keep-render-awake.yml`.
+      - Override opcional: define `RENDER_HEALTHCHECK_URL` en Repository Variables o Secrets.
+
+4. **Verificación rápida antes de presentar**
+    - Confirma respuesta 200 del endpoint `/health`.
+    - Confirma login exitoso y acceso al dashboard.
+
+5. **Limitación conocida del plan gratuito**
+    - Si no hay tráfico, Render puede dormir la instancia nuevamente.
+    - Para eliminar este comportamiento de forma definitiva, migrar a plan pago en backend.
+
 🔥 **Felicitaciones! El Micro ERP ahora está operando en un ecosistema de nube productivo.**

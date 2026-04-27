@@ -8,7 +8,8 @@ services:
     runtime: node
     plan: free
     buildCommand: pnpm install --frozen-lockfile && pnpm run build
-    startCommand: node dist/main.js
+    # start:prod ejecuta prestart:prod y garantiza migraciones antes del arranque.
+    startCommand: pnpm run start:prod
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -19,5 +20,7 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         sync: false  # https://micro-erp-demo.vercel.app
+      - key: CRON_SECRET
+        sync: false
       - key: PORT
         value: 10000

@@ -1,0 +1,45 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: true
+
+jobs:
+  ping-render-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve healthcheck URL
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="${{ vars.RENDER_HEALTHCHECK_URL }}"
+          if [ -z "$URL" ]; then
+            URL="${{ secrets.RENDER_HEALTHCHECK_URL }}"
+          fi
+          if [ -z "$URL" ]; then
+            URL="https://micro-erp-api.onrender.com/health"
+          fi
+
+          if [[ "$URL" != https://* ]]; then
+            echo "RENDER_HEALTHCHECK_URL must start with https://"
+            exit 1
+          fi
+
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Ping Render health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Pinging: ${{ steps.resolve.outputs.url }}"
+          curl --fail --silent --show-error --max-time 25 \
+            --header "User-Agent: micro-erp-keepalive/1.0" \
+            "${{ steps.resolve.outputs.url }}" > /tmp/health.json
+          cat /tmp/health.json
