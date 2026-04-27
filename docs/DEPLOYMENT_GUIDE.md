@@ -22,6 +22,13 @@ Gracias al archivo de Infraestructura como Código (`render.yaml`) incluido en e
 2. Render detectará automáticamente el archivo `render.yaml` dentro de la carpeta `backend` o en la raíz (dependiendo tu Blueprint configuration) y creará el Web Service **"micro-erp-api"**.
 3. **Migraciones Automáticas:** El `package.json` incluye el script `prestart:prod: pnpm run migration:run`. Cuando Render ejecute `pnpm run start:prod`, primero correrá las migraciones e impactará Supabase de forma automatizada y segura.
 
+### Nota de Monorepo (Importante)
+
+Si Render ejecuta comandos en la raíz del repositorio, debes entrar explícitamente al backend para evitar el error `ERR_PNPM_NO_PKG_MANIFEST`.
+
+- `buildCommand`: `cd backend && pnpm install --frozen-lockfile && pnpm run build`
+- `startCommand`: `cd backend && pnpm run start:prod`
+
 ### Variables de Entorno Requeridas en Render
 Tienes que configurar estas variables desde el panel del Web Service en Render:
 

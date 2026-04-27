@@ -7,9 +7,10 @@ services:
     name: micro-erp-api
     runtime: node
     plan: free
-    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    # Monorepo: Render clona en la raíz, por eso los comandos deben entrar a /backend.
+    buildCommand: cd backend && pnpm install --frozen-lockfile && pnpm run build
     # start:prod ejecuta prestart:prod y garantiza migraciones antes del arranque.
-    startCommand: pnpm run start:prod
+    startCommand: cd backend && pnpm run start:prod
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

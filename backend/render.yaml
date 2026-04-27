@@ -3,8 +3,9 @@ services:
     name: micro-erp-api
     env: node
     region: ohio
-    buildCommand: pnpm install --frozen-lockfile && pnpm run build
-    startCommand: pnpm run start:prod
+    # Monorepo: Render clona en la raíz del repo, no dentro de backend.
+    buildCommand: cd backend && pnpm install --frozen-lockfile && pnpm run build
+    startCommand: cd backend && pnpm run start:prod
     healthCheckPath: /health
     envVars:
       - key: PORT
