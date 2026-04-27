@@ -12,7 +12,10 @@ concurrency:
 jobs:
   ping-render-health:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Render Free Tier cold start can take up to 90 seconds.
+    # With 3 retries (--retry 3) and 20-second delay each, worst-case wall time is:
+    #   4 attempts × 90 seconds + 3 delays × 20 seconds = 420 seconds ≈ 7 min → fits in 10 min.
+    timeout-minutes: 10
     steps:
       - name: Resolve healthcheck URL
         id: resolve
@@ -39,7 +42,14 @@ jobs:
         run: |
           set -euo pipefail
           echo "Pinging: ${{ steps.resolve.outputs.url }}"
-          curl --fail --silent --show-error --max-time 25 \
+          # --max-time 90    : each attempt waits up to 90 seconds (covers Render cold start)
+          # --retry 3      : retry up to 3 more times on failure
+          # --retry-delay 20 : wait 20 s between retries
+          # --retry-all-errors: also retry on HTTP errors (e.g. 503 during spin-up)
+          # --fail         : exit non-zero on HTTP 4xx/5xx after all retries exhausted
+          curl --fail --silent --show-error \
+            --max-time 90 \
+            --retry 3 --retry-delay 20 --retry-all-errors \
             --header "User-Agent: micro-erp-keepalive/1.0" \
             "${{ steps.resolve.outputs.url }}" > /tmp/health.json
           cat /tmp/health.json
