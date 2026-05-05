@@ -276,7 +276,7 @@ export default function ClienteDetallePage() {
         try {
             await api.post(`/transactions/forgive`, {
                 customer_id: id,
-                ...payload,
+                description: `[${payload.action_type}] ${payload.reason}`,
                 idempotency_key: idempotencyKey,
             });
             setShowDebtForgiveness(false);
