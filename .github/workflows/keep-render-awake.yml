@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Pinging: ${{ steps.resolve.outputs.url }}"
-          curl --fail --silent --show-error --max-time 25 \
+          curl --fail --silent --show-error --max-time 120 \
             --header "User-Agent: micro-erp-keepalive/1.0" \
             "${{ steps.resolve.outputs.url }}" > /tmp/health.json
           cat /tmp/health.json
