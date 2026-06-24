@@ -9,6 +9,7 @@ import {
 import { randomUUID } from 'crypto';
 import { DataSource, QueryRunner } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
+import { IdempotentBatchOperation } from './entities/idempotent-batch-operation.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { TransactionType } from '../../common/enums/transaction-type.enum';
 import { PaymentMethod } from '../../common/enums/payment-method.enum';
@@ -665,18 +666,30 @@ export class TransactionsService {
       // Timeout más generoso para batch: lockea TODOS los customers del tenant
       await queryRunner.query(`SET lock_timeout = ${this.LOCK_TIMEOUT_MS * 2}`);
 
-      // Idempotencia: prevenir recalculaciones duplicadas
-      const existing = await this.findByIdempotencyKey(
-        queryRunner,
-        tenantId,
-        dto.idempotency_key,
+      /**
+       * Idempotencia del BATCH (no de cada Transaction individual).
+       *
+       * Se consulta la tabla dedicada IdempotentBatchOperation, protegida por
+       * UNIQUE(tenant_id, idempotency_key). Si la operación ya se ejecutó,
+       * devolvemos el RESULTADO REAL guardado (no ceros), evitando re-aplicar
+       * el ajuste y respondiendo de forma consistente ante reintentos.
+       */
+      const existingBatch = await queryRunner.manager.findOne(
+        IdempotentBatchOperation,
+        {
+          where: { tenant_id: tenantId, idempotency_key: dto.idempotency_key },
+        },
       );
-      if (existing) {
+      if (existingBatch) {
         this.logger.log(
-          `[INFLATION] Idempotencia: key ${dto.idempotency_key} ya procesada — User: ${userId}`,
+          `[INFLATION] Idempotencia: batch ${dto.idempotency_key} ya procesado — User: ${userId}`,
         );
         await queryRunner.commitTransaction();
-        return { affected_customers: 0, total_adjustment_cents: 0 };
+        return {
+          affected_customers: existingBatch.affected_customers,
+          // bigint vuelve como string desde Postgres → normalizar a number
+          total_adjustment_cents: Number(existingBatch.total_adjustment_cents),
+        };
       }
 
       this.logger.log(
@@ -704,7 +717,11 @@ export class TransactionsService {
 
         if (adjustmentCents <= 0) continue;
 
-        // Crear transacción INFLATION_ADJUSTMENT
+        // Crear transacción INFLATION_ADJUSTMENT.
+        // Cada fila usa su PROPIA idempotency_key única: la protección contra
+        // reintentos del batch vive ahora en IdempotentBatchOperation, no en
+        // esta columna. Reutilizar dto.idempotency_key aquí violaría el índice
+        // único UNIQUE(tenant_id, idempotency_key) de Transaction.
         const transaction = queryRunner.manager.create(Transaction, {
           tenant_id: tenantId,
           customer_id: customer.id,
@@ -712,7 +729,7 @@ export class TransactionsService {
           type: TransactionType.INFLATION_ADJUSTMENT,
           amount_cents: adjustmentCents,
           description: `Ajuste por inflación: ${dto.percentage}%`,
-          idempotency_key: dto.idempotency_key,
+          idempotency_key: randomUUID(),
         });
         await queryRunner.manager.save(transaction);
 
@@ -722,6 +739,21 @@ export class TransactionsService {
 
         totalAdjustment += adjustmentCents;
       }
+
+      /**
+       * Sellar la idempotencia del batch DENTRO de la misma transacción.
+       * Si algo falla después, este insert también hace rollback (atomicidad).
+       * El índice único UNIQUE(tenant_id, idempotency_key) es la barrera real
+       * contra reintentos concurrentes del mismo batch.
+       */
+      const batchRecord = queryRunner.manager.create(IdempotentBatchOperation, {
+        tenant_id: tenantId,
+        idempotency_key: dto.idempotency_key,
+        operation_type: TransactionType.INFLATION_ADJUSTMENT,
+        affected_customers: debtors.length,
+        total_adjustment_cents: totalAdjustment,
+      });
+      await queryRunner.manager.save(batchRecord);
 
       await queryRunner.commitTransaction();
 
