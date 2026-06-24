@@ -229,6 +229,7 @@ export class AuthService {
       sub: user.id,
       tenant_id: user.tenant_id,
       role: user.role,
+      email: user.email,
       token_version: user.token_version,
       sub_status: user.tenant.status,
       sub_expires_at: subscriptionExpiresAt,
