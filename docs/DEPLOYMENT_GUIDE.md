@@ -35,10 +35,14 @@ Tienes que configurar estas variables desde el panel del Web Service en Render:
 | Variable | Descripción | Ejemplo |
 |:---:|---:|---:|
 | `DATABASE_URL` | String de conexión a Supabase (PostgreSQL) | `postgresql://...` |
-| `JWT_SECRET` | Llave criptográfica fuerte para firmar tokens | `Generar string aleatorio (ej: openssl rand -base64 32)` |
+| `JWT_SECRET` | Llave criptográfica fuerte para firmar tokens de sesión (login) | `Generar string aleatorio (ej: openssl rand -base64 32)` |
+| `JWT_SUMMARY_SECRET` | Secreto **dedicado** para los magic links públicos de resumen de deuda (WhatsApp, 72h). **Distinto** de `JWT_SECRET`. El backend **no arranca** si falta. | `Otro string aleatorio distinto` |
+| `JWT_RESET_SECRET` | Secreto **dedicado** para los tokens de recuperación de contraseña (15m). **Distinto** de los anteriores. | `Otro string aleatorio distinto` |
 | `FRONTEND_URL` | URL donde vivirá Next.js (para configurar CORS) | `https://micro-erp.vercel.app` (sin / al final) |
 | `CRON_SECRET` | Clave secreta para disparar tareas programadas externas | `Un string seguro` |
 | `PORT` | *(Opcional)* Puerto expuesto. | `10000` |
+
+> ⚠️ **Tras este cambio de seguridad:** si `JWT_SUMMARY_SECRET` no está configurado en Render, el deploy fallará en el arranque (`getOrThrow`). Configurá la variable **antes** de promover el deploy. Rotar `JWT_SUMMARY_SECRET` invalida los magic links de resumen ya emitidos (comportamiento esperado).
 
 ---
 

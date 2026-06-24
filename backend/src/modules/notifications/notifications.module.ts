@@ -16,9 +16,18 @@ import { PublicSummaryController } from './public-summary.controller';
  * - CU-NOTIF-01: Magic link con JWT de solo lectura para resumen de deuda
  * - CU-NOTIF-02: Inyección del payment_alias en el resumen
  *
- * JwtModule se registra de forma independiente al de AuthModule
- * porque necesitamos el mismo secreto pero podríamos querer
- * diferentes configuraciones en el futuro (ej: algoritmo, issuer).
+ * JwtModule se registra de forma independiente al de AuthModule y usa un
+ * SECRETO DEDICADO (JWT_SUMMARY_SECRET), distinto del JWT_SECRET de login.
+ *
+ * Por qué (defensa en profundidad / STRIDE):
+ * Los magic links de resumen son tokens públicos de larga vida (72h) que
+ * viajan por WhatsApp. Firmarlos con el mismo secreto que las sesiones de
+ * login acoplaría dos superficies de riesgo muy distintas. Con un secreto
+ * propio, comprometer/rotar uno no afecta al otro. Mismo patrón que el
+ * JWT_RESET_SECRET del flujo de recuperación de contraseña.
+ *
+ * getOrThrow falla explícitamente en el arranque si la variable no está
+ * configurada (no hay default silencioso).
  */
 @Module({
   imports: [
@@ -27,7 +36,7 @@ import { PublicSummaryController } from './public-summary.controller';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>('JWT_SECRET'),
+        secret: config.getOrThrow<string>('JWT_SUMMARY_SECRET'),
       }),
     }),
   ],
