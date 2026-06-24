@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
@@ -87,7 +91,7 @@ export class NotificationsService {
     });
 
     if (!customer) {
-      throw new Error('Cliente no encontrado');
+      throw new NotFoundException('Cliente no encontrado');
     }
 
     const payload: SummaryTokenPayload = {
@@ -120,11 +124,11 @@ export class NotificationsService {
     try {
       payload = this.jwtService.verify<SummaryTokenPayload>(token);
     } catch {
-      throw new Error('Enlace inválido o expirado');
+      throw new UnauthorizedException('Enlace inválido o expirado');
     }
 
     if (payload.type !== 'summary') {
-      throw new Error('Token inválido');
+      throw new UnauthorizedException('Token inválido');
     }
 
     const { tenant_id, customer_id } = payload;
@@ -171,7 +175,7 @@ export class NotificationsService {
     ]);
 
     if (!tenant || !customer) {
-      throw new Error('Datos no encontrados');
+      throw new NotFoundException('Datos no encontrados');
     }
 
     // Extraer payment_alias del JSONB settings (CU-NOTIF-02)

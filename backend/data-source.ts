@@ -4,6 +4,7 @@ import { Customer } from './src/modules/customers/entities/customer.entity';
 import { Tenant } from './src/modules/tenants/entities/tenant.entity';
 import { User } from './src/modules/users/entities/user.entity';
 import { Transaction } from './src/modules/transactions/entities/transaction.entity';
+import { IdempotentBatchOperation } from './src/modules/transactions/entities/idempotent-batch-operation.entity';
 import { CashRegisterLog } from './src/modules/cash-register/entities/cash-register-log.entity';
 import { AuditLog } from './src/modules/audit/entities/audit-log.entity';
 
@@ -24,7 +25,16 @@ export const AppDataSource = new DataSource({
    * corren fuera del contexto de NestJS. Hay que proveer la ruta
    * absoluta a las entidades o listarlas explícitamente.
    */
-  entities: [Customer, Tenant, User, Transaction, CashRegisterLog, AuditLog, BillingEvent],
+  entities: [
+    Customer,
+    Tenant,
+    User,
+    Transaction,
+    IdempotentBatchOperation,
+    CashRegisterLog,
+    AuditLog,
+    BillingEvent,
+  ],
   migrations: ['src/database/migrations/*.ts'],
   ssl: {
     rejectUnauthorized: false,

@@ -275,9 +275,13 @@ describe('TransactionsService', () => {
   // ─── INFLACIÓN (CU-TX-05) ──────────────────────────────────────────
 
   describe('applyInflationAdjustment', () => {
-    it('debe retornar 0 affected si idempotency key ya existe', async () => {
+    it('debe retornar el resultado guardado si el batch ya fue procesado', async () => {
+      // Idempotency hit en IdempotentBatchOperation: devuelve el resultado REAL.
+      // total_adjustment_cents vuelve como string porque la columna es bigint.
       (mockQueryRunner.manager!.findOne as jest.Mock).mockResolvedValueOnce({
-        id: 'existing',
+        id: 'batch-existing',
+        affected_customers: 7,
+        total_adjustment_cents: '4200',
       }); // idempotency hit
 
       const result = await service.applyInflationAdjustment(
@@ -290,9 +294,10 @@ describe('TransactionsService', () => {
       );
 
       expect(result).toEqual({
-        affected_customers: 0,
-        total_adjustment_cents: 0,
+        affected_customers: 7,
+        total_adjustment_cents: 4200,
       });
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
     });
 
     it('debe aplicar porcentaje correcto a todos los deudores', async () => {

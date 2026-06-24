@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Transaction } from './entities/transaction.entity';
+import { IdempotentBatchOperation } from './entities/idempotent-batch-operation.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
@@ -19,7 +20,9 @@ import { TransactionsController } from './transactions.controller';
  * dentro de QueryRunner transactions.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Transaction, Customer])],
+  imports: [
+    TypeOrmModule.forFeature([Transaction, IdempotentBatchOperation, Customer]),
+  ],
   controllers: [TransactionsController],
   providers: [TransactionsService],
   exports: [TypeOrmModule],

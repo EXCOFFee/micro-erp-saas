@@ -36,6 +36,14 @@ export interface JwtPayload {
   role: UserRole;
 
   /**
+   * Email del usuario (solo display).
+   * El frontend lo decodifica del JWT para mostrarlo en el header y en el
+   * nombre del cajero de los tickets. No se usa para autorización (eso lo
+   * gobiernan `sub`, `tenant_id`, `role` y `token_version`).
+   */
+  email: string;
+
+  /**
    * Versión del token para invalidación instantánea (Kill Switch — CU-AUDIT-02).
    *
    * El JwtStrategy compara este valor contra `User.token_version` en la BD.
