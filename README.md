@@ -1,126 +1,166 @@
-# Micro-ERP SaaS
+# 🧾 Micro-ERP SaaS — Gestión de Fiados para Comercios
 
-Sistema de gestión de fiados (crédito informal) para pequeños comercios argentinos. Multi-tenant, con control de deudas, pagos, arqueo de caja y notificaciones por WhatsApp.
+> **Sistema multi-tenant para que kioscos, almacenes y comercios de barrio lleven el control de la “libreta de fiados” (crédito informal): deudas, pagos, arqueo de caja y avisos por WhatsApp — sin Excel ni cuadernos.**
 
-![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=flat-square&logo=nestjs&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-000?style=flat-square&logo=next.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+[![NestJS](https://img.shields.io/badge/NestJS_11-E0234E?style=flat-square&logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![Next.js](https://img.shields.io/badge/Next.js_16-000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Tailwind](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Tests](https://img.shields.io/badge/tests-24_unit_+_integración-success?style=flat-square)](#-calidad-y-testing)
 
-## Funcionalidades
+---
 
-| Módulo | Descripción |
+## 🚀 Demo en vivo
+
+**👉 [micro-erp-saas.vercel.app](https://micro-erp-saas.vercel.app)**
+
+- **Probalo en 30 segundos:** entrá a `/register` y creá tu comercio gratis (sos ADMIN al instante).
+- ⏳ *Nota: el backend corre en el plan gratuito de Render y “se duerme” tras inactividad. El **primer** request puede tardar ~30s en despertar — después vuela.*
+
+---
+
+## 💡 El problema que resuelve
+
+Miles de comercios de barrio en Argentina venden “fiado” (a crédito) y lo anotan en un cuaderno. Eso trae plata perdida, discusiones con clientes, y cero visibilidad de quién debe cuánto.
+
+**Micro-ERP digitaliza esa libreta** con reglas de un sistema financiero serio: cada peso cuadra, nada se borra, y dos cajeros nunca pisan el saldo del mismo cliente.
+
+---
+
+## ✨ Funcionalidades
+
+| Módulo | Qué hace |
 |---|---|
-| **Auth** | JWT con RBAC (ADMIN / CAJERO), onboarding de comercio |
-| **Clientes** | Alta, búsqueda, bloqueo, promesas de pago, fusión de duplicados |
-| **Transacciones** | Fiados, pagos, reversiones, ajuste inflación batch, idempotencia |
-| **Caja** | Arqueo de turno, cierre con detección de descuadre |
-| **Notificaciones** | Magic links por WhatsApp con resumen de deuda + alias de pago |
-| **Dashboard** | KPIs, top 10 morosos, exportar CSV |
-| **Configuración** | Settings por tenant (alias MercadoPago, moneda, ticket) |
+| 🔐 **Auth & RBAC** | Registro de comercio, login JWT, roles **ADMIN / CAJERO**, recuperación de contraseña por email |
+| 👥 **Clientes** | Alta, búsqueda, límite de crédito, bloqueo (lista negra), promesas de pago, fusión de duplicados |
+| 💸 **Transacciones** | Fiados, pagos (efectivo / transferencia / **mixto**), reversiones, condonación, **ajuste por inflación en lote** |
+| 🧮 **Caja** | Apertura y cierre de turno con **arqueo** y detección automática de descuadre |
+| 📲 **Notificaciones** | Link mágico por **WhatsApp** con el resumen de deuda del cliente + alias de pago (MercadoPago) |
+| 📊 **Dashboard** | KPIs del comercio, top 10 morosos, exportación a CSV |
+| 🤖 **Automatización** | Cron diario que detecta morosos vencidos y auto-bloquea según reglas del comercio |
+| 🧾 **Auditoría** | Registro inmutable de acciones sensibles (cambios de límite, bloqueos, condonaciones) |
+| 💳 **Facturación SaaS** | Estados de suscripción (trial / activo / vencido / suspendido) vía webhook de MercadoPago |
 
-## Arquitectura
+---
+
+## 🧠 Lo que hace este proyecto técnicamente interesante
+
+No es un CRUD. El núcleo es un **motor financiero** diseñado con las mismas reglas que usaría un banco:
+
+- **💵 Cero decimales flotantes.** Todos los montos se guardan en **centavos enteros** (`$150,50` → `15050`). Imposible que un redondeo de `float` haga “desaparecer” un centavo.
+- **🔒 Bloqueo pesimista (ACID).** Toda operación que toca un saldo lockea la fila del cliente con `SELECT … FOR UPDATE`. Dos cajeros cobrándole al mismo cliente **nunca** generan una race condition.
+- **♻️ Idempotencia real.** Cada operación lleva una `idempotency_key`. Un doble-click o un reintento por timeout **no** duplica una deuda o un pago — garantizado por un índice único en la base.
+- **🧱 Inmutabilidad.** Las transacciones son *append-only*: nada se borra ni se edita. Un error se corrige con un asiento de **reversión**, dejando el historial intacto para auditoría.
+- **🏢 Aislamiento multi-tenant.** El `tenant_id` sale **del JWT, nunca del request**, y filtra absolutamente todas las queries. Un comercio jamás ve datos de otro.
+- **🛡️ Seguridad por capas.** Helmet, rate-limiting, CORS estricto, *kill-switch* de sesiones por versión de token, secretos JWT **dedicados por propósito** (login / reset / links públicos) y filtro global que nunca filtra stack traces.
+
+> 🐛 **Bonus — un bug real cazado con un test real:** el ajuste por inflación en lote violaba un índice único de Postgres con 2+ deudores. Se resolvió con una tabla de idempotencia dedicada y se blindó con un **test de integración sobre un Postgres real (Testcontainers)** — porque el mock anterior ocultaba el problema. ([ver fix](https://github.com/EXCOFFee/micro-erp-saas/commit/cbab4f7))
+
+---
+
+## 🏗️ Arquitectura
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Frontend   │────▶│   Backend    │────▶│  PostgreSQL  │
-│  (Vercel)   │     │  (Render)    │     │  (Supabase)  │
-│  Next.js 16 │     │  NestJS 11   │     │  Free Tier   │
-└─────────────┘     └──────────────┘     └──────────────┘
+┌──────────────┐      HTTPS / JWT       ┌──────────────┐     SQL (pool)    ┌──────────────┐
+│   Frontend    │  ───────────────────▶  │   Backend     │  ──────────────▶  │  PostgreSQL  │
+│   Next.js 16  │                        │   NestJS 11   │                   │   Supabase   │
+│   (Vercel)    │  ◀───────────────────  │   (Render)    │  ◀──────────────  │              │
+└──────────────┘      JSON / errores     └──────────────┘     ACID + locks   └──────────────┘
 ```
 
-**Decisiones técnicas clave:**
--  **Integer-only cents** — Cero floats para montos ($50.00 = 5000 cents)
--  **Pessimistic locking** — Transacciones ACID con `FOR UPDATE`
--  **Idempotency keys** — Protección contra doble-click y timeout de Render
--  **Multi-tenant** — Aislamiento total por `tenant_id` en cada query
--  **Inmutabilidad** — Las transacciones no se borran, se revierten
+- **Frontend** (Next.js App Router, React 19, Tailwind v4): UI, validación con Zod, JWT en cookie.
+- **Backend** (NestJS, TypeORM): guards globales encadenados `Auth → Roles → Suscripción`, motor financiero transaccional, cron jobs y cola de emails (BullMQ).
+- **Base de datos** (PostgreSQL): esquema versionado con **migraciones de TypeORM**.
 
-##  Levantar local
+---
 
-### Requisitos
-- Node.js 20+
-- pnpm
-- PostgreSQL (o cuenta gratuita de [Supabase](https://supabase.com))
+## 🛠️ Stack tecnológico
 
-### Backend
+| Capa | Tecnologías |
+|---|---|
+| **Frontend** | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · React Hook Form + Zod · Axios |
+| **Backend** | NestJS 11 · TypeORM · PostgreSQL · Passport JWT · bcrypt · BullMQ (Redis) · Helmet · Throttler |
+| **Infra** | Vercel (frontend) · Render (backend) · Supabase (Postgres) · GitHub Actions (keep-alive) |
+| **Calidad** | Jest · Testcontainers · ESLint · Prettier |
+
+---
+
+## ✅ Calidad y testing
+
+- **24 tests unitarios** sobre la lógica de negocio crítica (transacciones, clientes, notificaciones).
+- **Tests de integración con Postgres real** vía Testcontainers, que ejercen constraints reales de la base (no mocks).
+- **Tipado estricto** end-to-end con TypeScript, lint + format automatizados.
+
 ```bash
 cd backend
-cp ../.env.example .env  # Editar con tu DATABASE_URL y JWT_SECRET
-pnpm install
-pnpm run start:dev       # http://localhost:3000
+pnpm test         # unit tests
+pnpm run test:int # integración con Postgres real (requiere Docker)
 ```
 
-### Frontend
+---
+
+## ⚙️ Correr en local
+
+**Requisitos:** Node.js 20+, pnpm, y una base PostgreSQL (o una cuenta gratuita de [Supabase](https://supabase.com)).
+
 ```bash
+# 1. Backend
+cd backend
+cp .env.example .env          # completá DATABASE_URL y los JWT_*_SECRET
+pnpm install
+pnpm run start:dev            # http://localhost:3000
+
+# 2. Frontend (en otra terminal)
 cd frontend
 echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
 pnpm install
-pnpm run dev             # http://localhost:3001
+pnpm run dev                  # http://localhost:3001
 ```
 
-### Tests
-```bash
-cd backend
-pnpm run test            # 22 unit tests
-```
+> El detalle de despliegue en producción (Render + Vercel + Supabase) está en [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md).
 
-##  Deploy
+---
 
-### Backend → Render
-1. Conectar el repo en [Render](https://render.com)
-2. Usar `render.yaml` (Blueprint) o configurar manual:
-   - **Build**: `cd backend && pnpm install && pnpm run build`
-   - **Start**: `cd backend && node dist/main.js`
-   - **Health Check**: `/health`
-3. Configurar env vars: `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `NODE_ENV=production`
-
-### Frontend → Vercel
-1. Importar repo en [Vercel](https://vercel.com)
-2. Root Directory: `frontend`
-3. Env var: `NEXT_PUBLIC_API_URL=https://tu-backend.onrender.com`
-
-### Base de datos → Supabase
-1. Crear proyecto en [Supabase](https://supabase.com)
-2. Copiar el Connection String → `DATABASE_URL`
-3. Las tablas se crean automáticamente con `synchronize: true` (solo dev)
-
-## Cobertura de tests
-
-| Service | Tests | Casos cubiertos |
-|---|---|---|
-| TransactionsService | 10 | Deuda, pago, ajuste, reversión, idempotencia, rollback |
-| CustomersService | 7 | CRUD, bloqueo, fusión, validaciones |
-| NotificationsService | 5 | Magic links, JWT, resumen público |
-
-##  Estructura
+## 📂 Estructura del proyecto
 
 ```
 Micro-ERP/
-├── backend/                # NestJS 11 + TypeORM
+├── backend/                      # NestJS 11 + TypeORM
 │   └── src/
-│       ├── common/         # Guards, decorators, enums
-│       ├── database/       # TypeORM config (Supabase)
+│       ├── common/               # Guards, filtros, decorators, enums
+│       ├── database/migrations/  # Esquema versionado (TypeORM)
 │       └── modules/
-│           ├── auth/       # Login, registro, JWT
-│           ├── customers/  # CRUD + bloqueo + fusión
-│           ├── transactions/ # Motor financiero ACID
-│           ├── cash-register/ # Arqueo + cierre
-│           ├── dashboard/  # KPIs + export
-│           └── notifications/ # Magic links WhatsApp
-├── frontend/               # Next.js 16 + Tailwind v4
+│           ├── auth/             # Login, registro, JWT, reset password
+│           ├── customers/        # CRUD + bloqueo + fusión
+│           ├── transactions/     # 💰 Motor financiero ACID
+│           ├── cash-register/    # Arqueo y cierre de turno
+│           ├── notifications/    # Magic links de WhatsApp
+│           ├── dashboard/        # KPIs + export CSV
+│           ├── billing/          # Webhooks de suscripción
+│           ├── audit/            # Log inmutable de acciones
+│           └── cron/             # Detección de mora + auto-bloqueo
+├── frontend/                     # Next.js 16 + Tailwind v4
 │   └── src/
-│       ├── app/            # App Router pages
-│       ├── components/     # Sidebar
-│       ├── contexts/       # AuthContext (JWT)
-│       ├── lib/            # API client, formatters
-│       └── types/          # Shared interfaces
-├── docs/                   # Casos de uso + especificación
-├── render.yaml             # Render Blueprint
-└── .env.example            # Template de variables
+│       ├── app/                  # Páginas (App Router)
+│       ├── components/           # UI reutilizable
+│       ├── contexts/             # AuthContext (JWT)
+│       └── lib/                  # Cliente API, formatters
+└── docs/                         # Especificación, casos de uso y deploy
 ```
 
-## Licencia
+---
 
-MIT — Proyecto de portfolio.
+## 👤 Autor
+
+**Santiago Excofier** — Desarrollador Full-Stack
+
+- 💻 GitHub: [@EXCOFFee](https://github.com/EXCOFFee)
+- 🔗 LinkedIn: [santiago-excofier](https://www.linkedin.com/in/santiago-excofier-4649982b9/)
+- 📧 Contacto: [excofier.santi@gmail.com](mailto:excofier.santi@gmail.com)
+
+---
+
+## 📄 Licencia
+
+MIT — Proyecto de portfolio. Libre para usar como referencia.
