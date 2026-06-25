@@ -46,16 +46,16 @@ Tienes que configurar estas variables desde el panel del Web Service en Render:
 
 ### Recuperación de contraseña por email (opcional, 100% gratis)
 
-El flujo de "olvidé mi contraseña" encola el envío en **BullMQ (Redis)** y un worker lo manda vía **Brevo** (proveedor transaccional). Para activarlo en producción configurá estas variables en Render:
+El flujo de "olvidé mi contraseña" encola el envío en **BullMQ (Redis)** y un worker lo manda vía **Gmail SMTP** (`nodemailer`). Para activarlo en producción configurá estas variables en Render:
 
 | Variable | Descripción | Cómo obtenerla |
 |:---:|---|---|
 | `REDIS_URL` | Conexión Redis para la cola | **Render → New → Key Value** (gratis, mismo dashboard) o [Upstash](https://upstash.com) gratis. Copiá la *Internal/External Connection String*. |
-| `BREVO_API_KEY` | API key del proveedor de email | Cuenta gratis en [Brevo](https://www.brevo.com) → **SMTP & API → API Keys** (300 emails/día gratis). |
-| `RESET_EMAIL_FROM` | Email remitente **verificado** | En Brevo → **Senders** verificá un email tuyo (ej. tu Gmail). El mail sale desde ahí **hacia el usuario** que pidió la recuperación. |
+| `GMAIL_USER` | La cuenta de Gmail que **envía** | Tu propia cuenta, ej. `tucuenta@gmail.com`. |
+| `GMAIL_APP_PASSWORD` | App Password de 16 dígitos | Con 2FA activado: [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) → creá una para "Mail". **No** es tu contraseña normal. |
 | `RESET_EMAIL_FROM_NAME` | *(Opcional)* Nombre visible del remitente | Ej. `Micro ERP Seguridad` |
 
-> Si `BREVO_API_KEY` no está definida: en **local** el envío se *simula* (loguea el link en consola); en **producción** el worker falla el job de forma controlada (no rompe la app). Si `REDIS_URL` no está definida, la cola no procesa y el email no se envía.
+> El mail sale **desde** tu Gmail **hacia el usuario** que pidió la recuperación (cualquier destinatario; ~500/día). Si faltan las credenciales: en **local** el envío se *simula* (loguea el link en consola); en **producción** el worker falla el job de forma controlada (no rompe la app). Si `REDIS_URL` no está definida, la cola no procesa y el email no se envía.
 
 ---
 

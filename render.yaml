@@ -25,10 +25,10 @@ services:
         sync: false  # Secreto dedicado para tokens de reset de password (15m). Set manually.
       - key: REDIS_URL
         sync: false  # Cola BullMQ de emails. Render Key Value o Upstash (gratis). Set manually.
-      - key: BREVO_API_KEY
-        sync: false  # Proveedor de email transaccional (recuperación de contraseña). Set manually.
-      - key: RESET_EMAIL_FROM
-        sync: false  # Email remitente verificado en Brevo. Set manually.
+      - key: GMAIL_USER
+        sync: false  # Cuenta Gmail que envía los emails de recuperación. Set manually.
+      - key: GMAIL_APP_PASSWORD
+        sync: false  # App Password de Gmail (no la contraseña normal). Set manually.
       - key: FRONTEND_URL
         sync: false  # https://micro-erp-demo.vercel.app
       - key: CRON_SECRET
