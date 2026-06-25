@@ -27,40 +27,54 @@ export class PasswordResetEmailProcessor extends WorkerHost {
     ).replace(/\/$/, '');
     const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
-    const sender =
+    /**
+     * Proveedor: Brevo (API HTTP transaccional, free tier 300/día).
+     * Envía DESDE un remitente verificado (RESET_EMAIL_FROM) HACIA el email
+     * que solicitó la recuperación (`email`) — nunca al dueño del sistema.
+     */
+    const brevoApiKey = this.configService.get<string>('BREVO_API_KEY');
+    const senderEmail =
       this.configService.get<string>('RESET_EMAIL_FROM') ||
-      'Micro ERP Seguridad <no-reply@micro-erp.local>';
+      'no-reply@micro-erp.local';
+    const senderName =
+      this.configService.get<string>('RESET_EMAIL_FROM_NAME') ||
+      'Micro ERP Seguridad';
 
-    if (!resendApiKey) {
+    // Sin API key: en dev se SIMULA (loguea el link); en prod es error de config.
+    if (!brevoApiKey) {
       if (this.configService.get<string>('NODE_ENV') === 'production') {
-        throw new Error('RESEND_API_KEY no está configurado en producción');
+        throw new Error('BREVO_API_KEY no está configurado en producción');
       }
 
       this.logger.warn(
-        `RESEND_API_KEY no configurado. Email simulado para ${email}. Link: ${resetUrl}`,
+        `BREVO_API_KEY no configurado. Email simulado para ${email}. Link: ${resetUrl}`,
       );
       return;
     }
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${resendApiKey}`,
+        'api-key': brevoApiKey,
         'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify({
-        from: sender,
-        to: [email],
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email }],
         subject: 'Recuperación de contraseña - Micro ERP',
-        html: `<p>Recibimos una solicitud para restablecer tu contraseña.</p><p>Haz clic en el siguiente enlace (válido por 15 minutos):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+        htmlContent:
+          `<p>Recibimos una solicitud para restablecer tu contraseña en <strong>Micro ERP</strong>.</p>` +
+          `<p>Hacé clic en el siguiente enlace (válido por 15 minutos):</p>` +
+          `<p><a href="${resetUrl}">${resetUrl}</a></p>` +
+          `<p>Si no fuiste vos, podés ignorar este mensaje.</p>`,
       }),
     });
 
     if (!response.ok) {
       const providerResponse = await response.text();
       throw new Error(
-        `Proveedor SMTP rechazó la solicitud (${response.status}): ${providerResponse}`,
+        `Brevo rechazó el envío (${response.status}): ${providerResponse}`,
       );
     }
 

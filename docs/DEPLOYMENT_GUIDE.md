@@ -44,6 +44,19 @@ Tienes que configurar estas variables desde el panel del Web Service en Render:
 
 > ⚠️ **Tras este cambio de seguridad:** si `JWT_SUMMARY_SECRET` no está configurado en Render, el deploy fallará en el arranque (`getOrThrow`). Configurá la variable **antes** de promover el deploy. Rotar `JWT_SUMMARY_SECRET` invalida los magic links de resumen ya emitidos (comportamiento esperado).
 
+### Recuperación de contraseña por email (opcional, 100% gratis)
+
+El flujo de "olvidé mi contraseña" encola el envío en **BullMQ (Redis)** y un worker lo manda vía **Brevo** (proveedor transaccional). Para activarlo en producción configurá estas variables en Render:
+
+| Variable | Descripción | Cómo obtenerla |
+|:---:|---|---|
+| `REDIS_URL` | Conexión Redis para la cola | **Render → New → Key Value** (gratis, mismo dashboard) o [Upstash](https://upstash.com) gratis. Copiá la *Internal/External Connection String*. |
+| `BREVO_API_KEY` | API key del proveedor de email | Cuenta gratis en [Brevo](https://www.brevo.com) → **SMTP & API → API Keys** (300 emails/día gratis). |
+| `RESET_EMAIL_FROM` | Email remitente **verificado** | En Brevo → **Senders** verificá un email tuyo (ej. tu Gmail). El mail sale desde ahí **hacia el usuario** que pidió la recuperación. |
+| `RESET_EMAIL_FROM_NAME` | *(Opcional)* Nombre visible del remitente | Ej. `Micro ERP Seguridad` |
+
+> Si `BREVO_API_KEY` no está definida: en **local** el envío se *simula* (loguea el link en consola); en **producción** el worker falla el job de forma controlada (no rompe la app). Si `REDIS_URL` no está definida, la cola no procesa y el email no se envía.
+
 ---
 
 ## 🎨 3. Despliegue del Frontend (Vercel)

@@ -23,6 +23,12 @@ services:
         sync: false  # Secreto dedicado para magic links de resumen (72h). Set manually.
       - key: JWT_RESET_SECRET
         sync: false  # Secreto dedicado para tokens de reset de password (15m). Set manually.
+      - key: REDIS_URL
+        sync: false  # Cola BullMQ de emails. Render Key Value o Upstash (gratis). Set manually.
+      - key: BREVO_API_KEY
+        sync: false  # Proveedor de email transaccional (recuperación de contraseña). Set manually.
+      - key: RESET_EMAIL_FROM
+        sync: false  # Email remitente verificado en Brevo. Set manually.
       - key: FRONTEND_URL
         sync: false  # https://micro-erp-demo.vercel.app
       - key: CRON_SECRET
