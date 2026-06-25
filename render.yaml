@@ -19,6 +19,10 @@ services:
         sync: false  # Set manually in Render dashboard
       - key: JWT_SECRET
         generateValue: true
+      - key: JWT_SUMMARY_SECRET
+        sync: false  # Secreto dedicado para magic links de resumen (72h). Set manually.
+      - key: JWT_RESET_SECRET
+        sync: false  # Secreto dedicado para tokens de reset de password (15m). Set manually.
       - key: FRONTEND_URL
         sync: false  # https://micro-erp-demo.vercel.app
       - key: CRON_SECRET
