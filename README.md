@@ -1,3 +1,27 @@
+> **English** | [Español](#español)
+
+# Micro-ERP — Multi-tenant store-credit ledger for small shops
+
+Neighborhood shops in Argentina sell on informal store credit ("fiado") and track it in a paper notebook — which loses money and visibility. Micro-ERP replaces that notebook with a multi-tenant SaaS that behaves like a real financial ledger: every cent reconciles, records are never deleted, and concurrent cashiers can't corrupt the same balance.
+
+**Live demo:** https://micro-erp-saas.vercel.app — self-register in 30s (the free-tier backend may take ~30s to wake on the first request).
+
+## Key engineering decisions
+
+- **Pessimistic row-level locking on money paths** — Every balance change runs in a transaction that does `SELECT … FOR UPDATE` on the customer row first, guarded by a `lock_timeout`. Two cashiers charging the same customer serialize instead of double-counting; merging two customers locks both rows in fixed UUID order to avoid deadlock.
+- **Per-tenant idempotency via a unique index** — Writes carry an idempotency key, and `UNIQUE(tenant_id, idempotency_key)` turns a double-submit (double-click, cold-start retry) into a safe no-op. A batch job that reused one key broke this index — fixed with a dedicated table and pinned by an integration test on a real Postgres (Testcontainers), because a mock had hidden the bug.
+- **Immutable, append-only ledger** — Transactions are never edited or deleted; a mistake becomes a `REVERSAL` row that inverts the amount. Money is stored as integer cents, never floats.
+- **Cash reconciliation with discrepancy detection** — Closing a shift computes expected cash with a SQL `SUM()`, compares it to the counted amount, and forces a mandatory note on any mismatch. Only one open shift per store, enforced by a lock.
+- **Multi-tenant isolation from the JWT** — `tenant_id` comes from the signed token, never the request body, and every query filters by it (verified across all ten dashboard aggregates). Isolation is enforced in the application layer, not via Postgres RLS.
+
+## Stack
+
+NestJS 11 · TypeORM · PostgreSQL · BullMQ + Redis · Passport JWT · Jest + Testcontainers · Next.js 16 / React 19 · Deployed on Render + Vercel + Supabase
+
+---
+
+<a id="español"></a>
+
 # 🧾 Micro-ERP SaaS — Gestión de Fiados para Comercios
 
 > **Sistema multi-tenant para que kioscos, almacenes y comercios de barrio lleven el control de la “libreta de fiados” (crédito informal): deudas, pagos, arqueo de caja y avisos por WhatsApp — sin Excel ni cuadernos.**
