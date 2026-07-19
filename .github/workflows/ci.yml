@@ -47,6 +47,11 @@ jobs:
       - name: Run tests (Backend)
         run: cd backend && pnpm run test
 
+      # Tests de integración con Postgres real (Testcontainers).
+      # Los runners ubuntu-latest de GitHub Actions traen Docker disponible.
+      - name: Run integration tests (Backend, Testcontainers)
+        run: cd backend && pnpm run test:int
+
       - name: Run linter (Frontend)
         run: cd frontend && pnpm run lint
 
