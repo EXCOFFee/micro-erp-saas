@@ -13,7 +13,7 @@ Neighborhood shops in Argentina sell on informal store credit ("fiado"), tracked
 - **Pessimistic row-level locking on money paths** — Every balance change locks the customer row (`SELECT … FOR UPDATE`) first, so concurrent charges serialize instead of double-counting — no lost updates.
 - **Per-tenant idempotency via a unique index** — A client key plus `UNIQUE(tenant_id, idempotency_key)` makes a double-submit a safe no-op. A batch job reusing one key broke this index — caught by a real-Postgres test after a mock had hidden it.
 - **Immutable, append-only ledger** — A mistake adds a `REVERSAL` that inverts the amount instead of editing or deleting. Money is integer cents, never floats.
-- **Multi-tenant isolation from the JWT** — `tenant_id` comes from the signed token, never the request body, and every query filters by it. Enforced in the application layer (not Postgres RLS) and covered by a cross-tenant IDOR test suite where every filter was mutation-tested: break the filter, the test fails.
+- **Multi-tenant isolation from the JWT** — `tenant_id` comes from the signed token, not the request body, and isolation is applied as a per-query filter in the application layer (not Postgres RLS) — a deliberate choice. The paths where a leak would hurt most (read-by-ID/IDOR, lists, aggregates, cash) are covered by a cross-tenant IDOR suite, each filter mutation-tested: break it, the test fails.
 
 ## Tested by breaking it
 
