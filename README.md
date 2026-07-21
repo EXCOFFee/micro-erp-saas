@@ -1,3 +1,5 @@
+<a id="english"></a>
+
 > **English** | [Español](#español)
 
 # Micro-ERP — Multi-tenant store-credit ledger for small shops
@@ -20,6 +22,8 @@ These guarantees run on a real Postgres (Testcontainers), not mocks, each proven
 ---
 
 <a id="español"></a>
+
+> [English](#english) | **Español**
 
 # 🧾 Micro-ERP SaaS — Gestión de Fiados para Comercios
 
@@ -72,10 +76,10 @@ Miles de comercios de barrio en Argentina venden “fiado” (a crédito) y lo a
 No es un CRUD. El núcleo es un **motor financiero** diseñado con las mismas reglas que usaría un banco:
 
 - **💵 Cero decimales flotantes.** Todos los montos se guardan en **centavos enteros** (`$150,50` → `15050`). Imposible que un redondeo de `float` haga “desaparecer” un centavo.
-- **🔒 Bloqueo pesimista (ACID).** Toda operación que toca un saldo lockea la fila del cliente con `SELECT … FOR UPDATE`. Dos cajeros cobrándole al mismo cliente **nunca** generan una race condition.
+- **🔒 Bloqueo pesimista (ACID).** Toda operación que toca un saldo lockea la fila del cliente con `SELECT … FOR UPDATE`. Dos cajeros cobrándole al mismo cliente **nunca** generan una race condition — verificado con un test de concurrencia.
 - **♻️ Idempotencia real.** Cada operación lleva una `idempotency_key`. Un doble-click o un reintento por timeout **no** duplica una deuda o un pago — garantizado por un índice único en la base.
 - **🧱 Inmutabilidad.** Las transacciones son *append-only*: nada se borra ni se edita. Un error se corrige con un asiento de **reversión**, dejando el historial intacto para auditoría.
-- **🏢 Aislamiento multi-tenant.** El `tenant_id` sale **del JWT, nunca del request**, y filtra absolutamente todas las queries. Un comercio jamás ve datos de otro.
+- **🏢 Aislamiento multi-tenant.** El `tenant_id` sale del **JWT, no del body del request**. El aislamiento se aplica como filtro por query en la capa de aplicación —una decisión de diseño, no RLS de Postgres—, y los caminos donde una fuga sería más grave (lectura por ID/IDOR, listados, agregaciones, caja) están cubiertos por tests de aislamiento cross-tenant.
 - **🛡️ Seguridad por capas.** Helmet, rate-limiting, CORS estricto, *kill-switch* de sesiones por versión de token, secretos JWT **dedicados por propósito** (login / reset / links públicos) y filtro global que nunca filtra stack traces.
 
 > 🐛 **Bonus — un bug real cazado con un test real:** el ajuste por inflación en lote violaba un índice único de Postgres con 2+ deudores. Se resolvió con una tabla de idempotencia dedicada y se blindó con un **test de integración sobre un Postgres real (Testcontainers)** — porque el mock anterior ocultaba el problema. ([ver fix](https://github.com/EXCOFFee/micro-erp-saas/commit/cbab4f7))
