@@ -2,21 +2,20 @@
 
 # Micro-ERP — Multi-tenant store-credit ledger for small shops
 
-Neighborhood shops in Argentina sell on informal store credit ("fiado") and track it in a paper notebook — which loses money and visibility. Micro-ERP replaces that notebook with a multi-tenant SaaS that behaves like a real financial ledger: every cent reconciles, records are never deleted, and concurrent cashiers can't corrupt the same balance.
+Neighborhood shops in Argentina sell on informal store credit ("fiado"), tracked in a paper notebook. Micro-ERP replaces it with a multi-tenant SaaS built like a real financial ledger: every cent reconciles and two cashiers can't corrupt the same balance.
 
-**Live demo:** https://micro-erp-saas.vercel.app — self-register in 30s (the free-tier backend may take ~30s to wake on the first request).
+**Live demo:** https://micro-erp-saas.vercel.app — self-register in 30s (free tier wakes in ~30s).
 
 ## Key engineering decisions
 
-- **Pessimistic row-level locking on money paths** — Every balance change runs in a transaction that does `SELECT … FOR UPDATE` on the customer row first, guarded by a `lock_timeout`. Two cashiers charging the same customer serialize instead of double-counting; merging two customers locks both rows in fixed UUID order to avoid deadlock.
-- **Per-tenant idempotency via a unique index** — Writes carry an idempotency key, and `UNIQUE(tenant_id, idempotency_key)` turns a double-submit (double-click, cold-start retry) into a safe no-op. A batch job that reused one key broke this index — fixed with a dedicated table and pinned by an integration test on a real Postgres (Testcontainers), because a mock had hidden the bug.
-- **Immutable, append-only ledger** — Transactions are never edited or deleted; a mistake becomes a `REVERSAL` row that inverts the amount. Money is stored as integer cents, never floats.
-- **Cash reconciliation with discrepancy detection** — Closing a shift computes expected cash with a SQL `SUM()`, compares it to the counted amount, and forces a mandatory note on any mismatch. Only one open shift per store, enforced by a lock.
-- **Multi-tenant isolation from the JWT** — `tenant_id` comes from the signed token, never the request body, and every query filters by it (verified across all ten dashboard aggregates). Isolation is enforced in the application layer, not via Postgres RLS.
+- **Pessimistic row-level locking on money paths** — Every balance change locks the customer row (`SELECT … FOR UPDATE`) first, so concurrent charges serialize instead of double-counting — no lost updates.
+- **Per-tenant idempotency via a unique index** — A client key plus `UNIQUE(tenant_id, idempotency_key)` makes a double-submit a safe no-op. A batch job reusing one key broke this index — caught by a real-Postgres test after a mock had hidden it.
+- **Immutable, append-only ledger** — A mistake adds a `REVERSAL` that inverts the amount instead of editing or deleting. Money is integer cents, never floats.
+- **Multi-tenant isolation from the JWT** — `tenant_id` comes from the signed token, never the request body, and every query filters by it. Enforced in the application layer (not Postgres RLS) and covered by a cross-tenant IDOR test suite where every filter was mutation-tested: break the filter, the test fails.
 
-## Stack
+## Tested by breaking it
 
-NestJS 11 · TypeORM · PostgreSQL · BullMQ + Redis · Passport JWT · Jest + Testcontainers · Next.js 16 / React 19 · Deployed on Render + Vercel + Supabase
+These guarantees run on a real Postgres (Testcontainers), not mocks, each proven by breaking the code it protects until the test fails. The sharpest: a `FOR UPDATE NOWAIT` probe shows a merge grabs the smaller UUID first, so cross-merges can't deadlock. → [concurrency tests](backend/test/integration/concurrency.int-spec.ts) · [isolation tests](backend/test/integration/tenant-isolation.int-spec.ts)
 
 ---
 
@@ -31,7 +30,7 @@ NestJS 11 · TypeORM · PostgreSQL · BullMQ + Redis · Passport JWT · Jest + T
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Tailwind](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/tests-24_unit_+_integración-success?style=flat-square)](#-calidad-y-testing)
+[![Tests](https://img.shields.io/badge/tests-24_unit_%2B_13_integration-success?style=flat-square)](#-calidad-y-testing)
 
 ---
 
@@ -113,13 +112,15 @@ No es un CRUD. El núcleo es un **motor financiero** diseñado con las mismas re
 ## ✅ Calidad y testing
 
 - **24 tests unitarios** sobre la lógica de negocio crítica (transacciones, clientes, notificaciones).
-- **Tests de integración con Postgres real** vía Testcontainers, que ejercen constraints reales de la base (no mocks).
-- **Tipado estricto** end-to-end con TypeScript, lint + format automatizados.
+- **13 tests de integración contra un Postgres real** (Testcontainers, no mocks) que cubren las garantías de **concurrencia** y **aislamiento multi-tenant**.
+- **Probados rompiéndolos:** cada test se validó rompiendo a propósito el código que protege —el filtro por `tenant_id`, el lock— y confirmando que se pone en rojo. Un test que no puede fallar no prueba nada.
+- El más filoso: una sonda **`FOR UPDATE NOWAIT`** demuestra que la fusión de clientes lockea primero el UUID menor, así dos fusiones cruzadas no generan deadlock. Otros prueban que cobros simultáneos no pierden saldo y que un comercio no puede leer datos de otro (IDOR).
+- Ver: [tests de concurrencia](backend/test/integration/concurrency.int-spec.ts) · [tests de aislamiento](backend/test/integration/tenant-isolation.int-spec.ts).
 
 ```bash
 cd backend
-pnpm test         # unit tests
-pnpm run test:int # integración con Postgres real (requiere Docker)
+pnpm test         # 24 unit tests
+pnpm run test:int # 13 tests de integración con Postgres real (requiere Docker)
 ```
 
 ---
