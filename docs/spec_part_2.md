@@ -23,7 +23,7 @@ Se DEBEN mantener todas las restricciones técnicas de la Parte 1 (cero floats, 
     * Utilizar el paquete `@nestjs/schedule` para crear un **Cron Job**.
     * Crear un servicio `OverdueNotificationCron` que se ejecute una vez al día (ej. `0 8 * * *`).
     * Este proceso buscará clientes cuyo `next_payment_promise` sea menor a la fecha actual y su `balance_cents` sea mayor a 0.
-    * **Restricción de Infraestructura:** Dado que estamos en Render (plan gratuito) y la instancia se "duerme" (*Cold Start*), el Cron Job interno de NestJS puede fallar si el servidor está inactivo. **Directiva para la IA:** Debes exponer también un *endpoint* seguro (ej. `POST /api/webhooks/cron/process-overdue`) protegido por un API Key secreta, para que un servicio externo (como cron-job.org o Vercel Cron) pueda despertar al servidor y ejecutar la tarea de forma confiable.
+    * **Restricción de Infraestructura:** Dado que estamos en Render (plan gratuito) y la instancia se "duerme" (*Cold Start*), el Cron Job interno de NestJS puede fallar si el servidor está inactivo. **Directiva técnica:** Se debe exponer también un *endpoint* seguro (ej. `POST /api/webhooks/cron/process-overdue`) protegido por un API Key secreta, para que un servicio externo (como cron-job.org o Vercel Cron) pueda despertar al servidor y ejecutar la tarea de forma confiable.
 
 ## 4. Actualización del DER (Nuevos campos/entidades)
 * **Tabla `Audit_Log` (Refinamiento):**

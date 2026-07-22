@@ -14,5 +14,5 @@ Impedir que un cliente moroso o problemático pueda seguir sacando mercadería f
 * **Cobranza Permitida:** Un cliente con `is_active = false` NO PUEDE registrar nuevas deudas (403 Forbidden), pero SÍ DEBE poder registrar pagos. Queremos recuperar la plata, solo cortamos el crédito nuevo.
 * **Informalidad Local:** El bloqueo puede aplicarse a perfiles informales (ej. clientes registrados solo con un "Apodo" y sin DNI).
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **TypeORM:** No usar `@DeleteDateColumn` (Soft Delete) para esto, ya que ocultaría al cliente del dashboard de morosos. Usar un flag explícito `is_active` (boolean) y un `UpdateQueryBuilder` filtrando por `tenant_id`.

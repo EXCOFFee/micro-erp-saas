@@ -10,5 +10,5 @@ Aplicar un recargo porcentual automático a todos los clientes que tengan deudas
 4. Por cada cliente, calcula el `monto_recargo_cents` e inserta una transacción tipo `INFLATION_ADJUSTMENT`.
 5. Actualiza los saldos.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **TypeORM:** Es una operación BATCH. Usar un solo `QueryRunner` para todo. Si falla el update del cliente 50 de 100, se hace un `.rollbackTransaction()` completo. NADA debe quedar a medias.

@@ -9,6 +9,6 @@ Permitir que el pago de una deuda se divida en múltiples métodos de pago para 
 3. Backend valida que la suma no supere la deuda del cliente.
 4. Inserta transacción principal `PAYMENT` de $15.000 y dos registros hijos en la tabla `Payment_Methods_Log`.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **Validación:** DTO robusto con `@IsArray()` y `@ValidateNested()`.
 * **Diseño BD:** Crear entidad relacionada `TransactionPaymentDetail` asociada a la `Transaction` principal.

@@ -12,4 +12,4 @@ Corregir un error de tipeo del cajero (ej: anotó $50.000 en vez de $5.000) sin 
 6. Marca la transacción original con `is_reversed = true`.
 
 ## ⚠️ Edge Cases & Reglas de Negocio
-* **Inmutabilidad Absoluta:** La IA TIENE ESTRICTAMENTE PROHIBIDO generar un endpoint que ejecute `DELETE FROM transactions`. Todo error se corrige con un asiento de reversión.
+* **Inmutabilidad Absoluta:** Está ESTRICTAMENTE PROHIBIDO exponer un endpoint que ejecute `DELETE FROM transactions`. Todo error se corrige con un asiento de reversión.

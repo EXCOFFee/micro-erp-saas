@@ -13,5 +13,5 @@ Registrar un nuevo consumo, descontando del límite de crédito y aumentando la 
 ## ⚠️ Edge Cases & Reglas de Negocio
 * **Idempotencia:** Si la red parpadea y entra el mismo `idempotency_key`, retornar 200 OK sin duplicar la deuda.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **TypeORM QueryRunner:** Todo el flujo DEBE ejecutarse dentro de un `queryRunner.startTransaction()` con `.setLock("pessimistic_write")`.

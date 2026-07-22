@@ -18,6 +18,6 @@ Autenticar a un usuario (Admin o Cajero) y emitir un token seguro que contenga s
 * **Prevención de Fuerza Bruta:** Bloquear la cuenta temporalmente tras 5 intentos fallidos (Opcional en MVP, considerar rate limiting).
 * **Seguridad Genérica:** Los mensajes de error de credenciales inválidas deben ser idénticos ("Credenciales inválidas"), sin revelar si el error fue el email o la contraseña.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **Payload del JWT:** El token DEBE contener estrictamente: `sub` (user_id), `tenant_id` y `role`. El `tenant_id` dentro de este payload será la fuente de verdad inmutable para todas las queries de TypeORM posteriores.
 * **NestJS:** Implementar usando `@nestjs/jwt` y `@nestjs/passport` (estrategia JwtStrategy).

@@ -17,6 +17,6 @@ Permitir al dueño del comercio crear, editar o desactivar cuentas secundarias p
 * **Escalada de Privilegios:** Un usuario con rol `CASHIER` no puede acceder a los endpoints de creación de usuarios. Si lo intenta, el sistema debe devolver 403 Forbidden.
 * **Desactivación:** No se hace `DELETE` físico de un empleado para no romper el historial de transacciones (auditoría). Se cambia el campo `is_active` a `false` (Soft Delete / Desactivación lógica). Un empleado inactivo no puede loguearse.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **NestJS Guards:** Usa un `RolesGuard` personalizado y un decorador `@Roles(Role.ADMIN)` para proteger el controlador completo de empleados.
 * **TypeORM:** Al crear el usuario, el `tenant_id` no debe venir del body del request (el frontend podría manipularlo). DEBE extraerse del objeto `req.user.tenant_id` provisto por el JWT en el backend.

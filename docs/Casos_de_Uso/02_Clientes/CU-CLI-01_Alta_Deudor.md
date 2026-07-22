@@ -18,6 +18,6 @@ Permitir a un cajero o admin registrar a una persona en el sistema para poder fi
 * **Validación de Duplicados:** Dos clientes no pueden tener el mismo `telefono` o `dni` DENTRO DEL MISMO TENANT. Sí pueden repetirse en Tenants distintos (Juan puede deber en el Kiosco A y en la Carnicería B).
 * **Seguridad Financiera:** El Frontend jamás debe enviar el campo `balance_cents` en el payload de creación, o debe ser ignorado por el Backend. El balance inicial es estrictamente 0 por defecto en la BD.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **DTO:** Usar `@IsInt()` para el `credit_limit_cents` asegurando que no entren floats.
 * **TypeORM:** Configurar en la entidad `Customer` una constraint `UNIQUE(tenant_id, telefono)` (índice compuesto).

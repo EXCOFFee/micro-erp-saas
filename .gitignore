@@ -24,6 +24,13 @@ desktop.ini
 .idea/
 *.sw[po]
 
+# AI tooling (configuración local de asistentes — no se publica)
+.agent/
+.agents/
+.claude/
+.cursor/
+.trae/
+
 # Logs
 *.log
 npm-debug.log*

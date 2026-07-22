@@ -19,7 +19,7 @@ Permitir que un dueño de comercio se registre en la plataforma SaaS, aprovision
 * **Aislamiento:** El nombre del comercio (`tenant_name`) puede repetirse (puede haber dos "Kiosco Carlitos"), pero el `email` del usuario DEBE ser único a nivel global.
 * **Atomicidad:** Si falla la creación del `User` (ej. base de datos caída o validación fallida), la creación del `Tenant` DEBE revertirse (Rollback). No pueden quedar Tenants "huérfanos" sin usuarios.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **TypeORM:** Usa un `QueryRunner` o `manager.transaction()` para asegurar que la inserción de `Tenant` y `User` sea ACID.
 * **Seguridad:** Hashea el `password` usando `bcrypt` o `argon2` antes de guardar en la DB. NUNCA devuelvas el password en el JSON de respuesta.
 * **Validación:** DTO con `@IsEmail()`, `@IsStrongPassword()` y `@IsString()` usando class-validator.

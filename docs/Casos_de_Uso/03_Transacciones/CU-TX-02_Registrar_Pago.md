@@ -10,6 +10,6 @@ Registrar un pago que realiza el cliente para achicar su deuda.
 4. Actualiza `balance_cents` restando el monto.
 5. Inserta `Transaction` (tipo `PAYMENT`).
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **Validación de Dinero:** El monto debe ser mayor a 0 (`@IsPositive()`).
 * **Seguridad Transaccional:** Usar la misma lógica de `pessimistic_write` e `idempotency_key` que en CU-TX-01 para evitar descontar dos veces si el cajero hace doble click.

@@ -1,6 +1,6 @@
 # DOCUMENTO DE ARQUITECTURA Y REQUISITOS: MICRO ERP DE CRÉDITOS (SaaS)
 
-**DIRECTIVA PRINCIPAL PARA LA IA:** Todo el código generado debe estar exhaustivamente comentado. El desarrollador humano debe entender exactamente qué hace cada línea, función y clase, como si fuera un estudiante. Además, se exige una validación extrema en cada capa (Frontend, API, Base de Datos) con un manejo de errores detallado (try/catch, logs precisos, códigos HTTP correctos) para identificar y solucionar problemas al instante. **Cualquier cálculo financiero debe priorizar la precisión absoluta y la prevención de condiciones de carrera (Race Conditions).**
+**Convenciones del proyecto:** todo el código se comenta explicando la intención de negocio. Se exige validación en cada capa (frontend, API, base de datos) con manejo de errores detallado (try/catch, logs precisos, códigos HTTP correctos). **Cualquier cálculo financiero prioriza la precisión (enteros en centavos) y la prevención de condiciones de carrera.**
 
 ## 1. Introducción
 * **Qué:** Un Micro ERP SaaS multi-tenant enfocado exclusivamente en la gestión de cuentas corrientes, créditos y cobranzas para pequeños comercios.
@@ -9,8 +9,8 @@
 
 ## 2. Stack Tecnológico
 * **Qué:** Backend: NestJS (Node.js) alojado en **Render**. Frontend: Next.js (React) + Tailwind CSS alojado en **Vercel**. Base de Datos: PostgreSQL alojada en **Supabase** (gestionada con TypeORM).
-* **Cómo:** NestJS provee una arquitectura modular estricta ideal para IA. TypeORM gestiona las entidades y los bloqueos pesados de BD. Next.js maneja el frontend de forma rápida y SEO-friendly. PostgreSQL asegura integridad transaccional.
-* **Por qué:** Es un stack moderno, altamente tipado (TypeScript de punta a punta, clave para evitar errores de la IA) y TypeORM permite implementar fácilmente patrones de *Pessimistic Locking* cruciales para sistemas financieros. Además, la combinación Vercel+Render+Supabase permite un despliegue inicial robusto y 100% gratuito.
+* **Cómo:** NestJS provee una arquitectura modular estricta. TypeORM gestiona las entidades y los bloqueos pesados de BD. Next.js maneja el frontend de forma rápida y SEO-friendly. PostgreSQL asegura integridad transaccional.
+* **Por qué:** Es un stack moderno, altamente tipado (TypeScript de punta a punta, para atrapar errores en compilación) y TypeORM permite implementar fácilmente patrones de *Pessimistic Locking* cruciales para sistemas financieros. Además, la combinación Vercel+Render+Supabase permite un despliegue inicial robusto y 100% gratuito.
 
 ## 3. Definition of Done (DoD)
 * **Qué:** Criterios para dar una tarea por terminada.

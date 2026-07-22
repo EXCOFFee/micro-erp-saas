@@ -9,5 +9,5 @@ Permitir al dueño descargar un listado completo de quién le debe plata y cuán
 3. Backend formatea los centavos a moneda decimal realista.
 4. Genera un archivo `.csv` o `.xlsx` y lo envía como `application/octet-stream`.
 
-## 🤖 Directivas Técnicas para la IA
-* **NestJS y Streams:** Si el comercio tiene miles de clientes, generar el string en memoria colapsará Node.js. La IA DEBE usar la API de *Streams* (`stream.Readable`) de Node.js junto con una librería como `csv-stringify` para enviar el archivo por partes (Chunked Response).
+## 🔧 Directivas Técnicas
+* **NestJS y Streams:** Si el comercio tiene miles de clientes, generar el string en memoria colapsará Node.js. Se DEBE usar la API de *Streams* (`stream.Readable`) de Node.js junto con una librería como `csv-stringify` para enviar el archivo por partes (Chunked Response).

@@ -16,6 +16,6 @@ Controlar el estado del Tenant en función del pago de la cuota mensual del uso 
 * **Gracia (Grace Period):** Antes de suspender, el sistema podría dar 3 días de gracia notificando al Admin.
 * **Bloqueo parcial:** Cuando un Tenant está suspendido, la UI debe mostrar un modal gigante que impida usar el sistema hasta que pague, permitiendo únicamente acceder a la pasarela de pago.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **NestJS Schedule:** Usa `@nestjs/schedule` para el Cron Job diario de revisión de morosos.
 * **Seguridad Webhook:** El endpoint que recibe el webhook de pago debe validar estrictamente la firma (Signature) del proveedor (Stripe/MP) para evitar que un atacante envíe pagos falsos y extienda suscripciones gratis.

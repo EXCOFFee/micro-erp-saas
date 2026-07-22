@@ -11,6 +11,6 @@ Registrar el momento en que un cajero termina su turno, comparando lo que el sis
 5. El cajero ingresa una nota obligatoria ("Tuve que pagarle al sodero").
 6. El backend inserta un registro en la tabla `Cash_Registers_Logs` (Cierres de Caja) con estado `CLOSED_WITH_DISCREPANCY`.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **Transaccionalidad:** Al hacer el cierre, el backend debe asociar el ID de este cierre a todas las transacciones `PAYMENT` de ese turno para "congelarlas" y que no se vuelvan a sumar en el turno de la tarde.
 * **Seguridad:** El cajero no puede modificar cierres de caja pasados.

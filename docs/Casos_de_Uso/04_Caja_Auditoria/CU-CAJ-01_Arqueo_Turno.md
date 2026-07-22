@@ -9,5 +9,5 @@ Calcular el total de dinero físico y digital que debería tener un cajero en su
 3. Rango de tiempo: Desde el último cierre de caja hasta `NOW()`.
 4. Devuelve totales agrupados: `{ total_cash_cents: 40000, total_transfer_cents: 15000 }`.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **TypeORM:** Usar `.select()` con funciones de agregación `SUM()`, agrupando por método de pago. NUNCA traer todas las transacciones a la memoria de Node.js, dejar que PostgreSQL haga la matemática.

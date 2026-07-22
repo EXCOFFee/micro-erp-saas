@@ -13,6 +13,6 @@ Llevar el saldo de un cliente a $0 sin que ingrese dinero real a la caja (ej: el
 3. Crea transacción tipo `FORGIVENESS` por el monto exacto adeudado.
 4. Actualiza `Customer.balance_cents = 0`.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **Auditoría:** La transacción debe llevar una nota/motivo obligatorio (ej: `description: "Pérdida asumida"`).
 * **Caja:** A diferencia del tipo `PAYMENT`, el tipo `FORGIVENESS` **NO DEBE SUMARSE** en el cálculo del arqueo de caja diario.

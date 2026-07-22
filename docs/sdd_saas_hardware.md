@@ -1,7 +1,6 @@
 # SDD — SaaS Core & Hardware (spec_parte_3.md)
 # Especificación de Diseño de Software
 # Versión: 1.0 | Fecha: 2026-04-22
-# Autor: Arquitecto DevSecOps
 
 ---
 

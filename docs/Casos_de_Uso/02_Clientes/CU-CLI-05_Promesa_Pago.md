@@ -9,5 +9,5 @@ Permitir al comercio agendar cuándo el cliente prometió venir a cancelar la de
 3. Backend actualiza el campo `next_payment_promise` en la tabla `Customers`.
 4. En el Dashboard, los clientes cuya fecha de promesa es "HOY" o "VENCIDA" aparecen resaltados en rojo.
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **TypeORM / DB:** Agregar columna `next_payment_promise` (Date) en `Customers`. Permitir que sea `NULL`.

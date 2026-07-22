@@ -16,6 +16,6 @@ Ajustar el monto máximo de deuda permitida para un cliente específico.
 * **Límite menor a deuda actual:** Si un cliente debe $50.000 y el Admin le baja el límite a $10.000, la operación ES VÁLIDA. El cliente quedará en estado "Excedido" y no podrá tomar nuevas deudas, pero su deuda histórica se mantiene intacta.
 * **Restricción de Rol:** Si un usuario con rol `CASHIER` envía un PATCH a esta ruta, la API debe rechazarlo (403 Forbidden).
 
-## 🤖 Directivas Técnicas para la IA
+## 🔧 Directivas Técnicas
 * **Seguridad:** En el controlador de NestJS, decorar la ruta con `@Roles(Role.ADMIN)`.
 * **Aislamiento:** La consulta de TypeORM debe ser `update({ id: customerId, tenant_id: req.user.tenantId }, { credit_limit_cents: newLimit })` para evitar que alteren clientes de otros comercios.
