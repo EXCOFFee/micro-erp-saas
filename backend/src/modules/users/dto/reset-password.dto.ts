@@ -1,4 +1,4 @@
-import { IsStrongPassword } from 'class-validator';
+import { IsStrongPassword, MaxLength } from 'class-validator';
 
 /**
  * DTO para resetear la contraseña de un cajero (CU-SAAS-03 extensión).
@@ -12,6 +12,9 @@ export class ResetPasswordDto {
   /**
    * Nueva contraseña temporal para el empleado.
    * El Admin la comunica al cajero fuera de banda (WhatsApp, en persona).
+   *
+   * Auditoría Staff Engineer (A3): @MaxLength(72) — límite real de bcrypt,
+   * ver auth/dto/login.dto.ts para el detalle completo del razonamiento.
    */
   @IsStrongPassword(
     {
@@ -26,5 +29,8 @@ export class ResetPasswordDto {
         'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo',
     },
   )
+  @MaxLength(72, {
+    message: 'La contraseña no puede superar los 72 caracteres',
+  })
   new_password: string;
 }

@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsInt,
   Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { MAX_AMOUNT_CENTS } from '../../transactions/dto/create-transaction.dto';
 
 /**
  * DTO para alta de nuevo cliente/deudor (CU-CLI-01).
@@ -57,6 +59,9 @@ export class CreateCustomerDto {
     message: 'El límite de crédito debe ser un número entero (centavos)',
   })
   @Min(0, { message: 'El límite de crédito no puede ser negativo' })
+  @Max(MAX_AMOUNT_CENTS, {
+    message: `El límite de crédito no puede superar ${MAX_AMOUNT_CENTS} centavos`,
+  })
   @Type(() => Number)
   credit_limit_cents?: number;
 }
