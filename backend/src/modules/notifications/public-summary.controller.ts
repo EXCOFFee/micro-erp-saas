@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -33,22 +27,19 @@ export class PublicSummaryController {
    *
    * @Public() — Excluye este endpoint del JwtAuthGuard global.
    * El token en la URL ES el mecanismo de autenticación (JWT de solo lectura).
+   *
+   * Auditoría Staff Engineer (M1): `notificationsService.getPublicSummary`
+   * ya lanza NotFoundException/UnauthorizedException — se deja propagar
+   * directamente y el GlobalExceptionFilter les da el status code correcto.
+   * El try/catch anterior downgradeaba a mano 401→400 (comparando
+   * `error.message` contra strings hardcodeados) y ni siquiera cubría
+   * 'Token inválido' (el segundo UnauthorizedException del service), que
+   * caía en el catch-all genérico. Quedó desactualizado tras un cambio
+   * anterior del service y nunca se corrigió acá.
    */
   @Public()
   @Get('summary/:token')
-  async getPublicSummary(@Param('token') token: string) {
-    try {
-      return await this.notificationsService.getPublicSummary(token);
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === 'Enlace inválido o expirado') {
-          throw new BadRequestException(error.message);
-        }
-        if (error.message === 'Datos no encontrados') {
-          throw new NotFoundException(error.message);
-        }
-      }
-      throw new BadRequestException('Enlace inválido');
-    }
+  getPublicSummary(@Param('token') token: string) {
+    return this.notificationsService.getPublicSummary(token);
   }
 }

@@ -24,7 +24,10 @@ export default async function PublicSummaryPage({ params }: { params: { token: s
         throw new Error('Error interno del servidor al conectar con la API.');
     }
 
-    if (res.status === 404 || res.status === 400) {
+    // 401: token inválido/expirado (UnauthorizedException del backend).
+    // 404: datos no encontrados (NotFoundException). 400 se conserva por
+    // compatibilidad con clientes/cachés viejos, aunque el backend ya no lo emite.
+    if (res.status === 404 || res.status === 400 || res.status === 401) {
         notFound();
     }
 
