@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { Public } from '../../common/decorators/public.decorator';
 import { OverdueCronService } from './overdue-cron.service';
 
@@ -84,7 +85,11 @@ export class CronController {
     // NUNCA hardcodeada — Regla de higiene del spec.md (§3.C).
     const expectedSecret = this.configService.get<string>('CRON_SECRET');
 
-    if (!secret || !expectedSecret || secret !== expectedSecret) {
+    if (
+      !secret ||
+      !expectedSecret ||
+      !this.timingSafeCompare(secret, expectedSecret)
+    ) {
       // Loguea el intento fallido para detectar ataques de fuerza bruta.
       this.logger.warn(
         '[WEBHOOK-CRON] Intento de acceso con X-Cron-Secret inválido',
@@ -123,5 +128,24 @@ export class CronController {
       message: 'Cron de mora iniciado en background',
       triggered_at: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Comparación en tiempo constante del secreto recibido vs el esperado.
+   *
+   * Un `!==` entre strings compara byte a byte y corta en la primera
+   * diferencia, filtrando por temporización cuántos caracteres iniciales
+   * acertó un atacante — el mismo problema detectado en la verificación de
+   * firma HMAC de MercadoPago (billing.service.ts). Aquí el riesgo es menor
+   * (el impacto de forzar CRON_SECRET es disparar el proceso de mora, no
+   * robar dinero), pero se corrige por consistencia y defensa en profundidad.
+   */
+  private timingSafeCompare(a: string, b: string): boolean {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+
+    if (bufA.length !== bufB.length) return false;
+
+    return crypto.timingSafeEqual(bufA, bufB);
   }
 }
