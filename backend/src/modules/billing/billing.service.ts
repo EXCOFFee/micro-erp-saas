@@ -121,9 +121,22 @@ export class BillingService {
       const mpSubscriptionId =
         rawPayload.data?.subscription_id || 'test_sub_id';
 
-      // Intentamos encontrar el tenant
+      /**
+       * Lock pesimista del Tenant (auditoría Staff Engineer — A2).
+       *
+       * Sin este lock, dos notificaciones de pago casi simultáneas para la
+       * misma suscripción (MercadoPago reintenta webhooks; también puede
+       * emitir eventos separados como payment.created/payment.updated para
+       * el mismo pago) pueden leer el mismo `subscription_expires_at` antes
+       * de que cualquiera escriba, y cada una suma +30 días desde la MISMA
+       * base — la que commitea última pisa a la otra (lost update): el
+       * comercio pagó dos veces pero solo se acredita una extensión.
+       * Mismo patrón que ya usan transactions.service.ts, customers.service.ts
+       * y cash-register.service.ts para toda mutación de estado compartido.
+       */
       const tenant = await queryRunner.manager.findOne(Tenant, {
         where: { mp_subscription_id: mpSubscriptionId },
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!tenant) {
