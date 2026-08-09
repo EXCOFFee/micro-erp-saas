@@ -391,6 +391,20 @@ export class AuthService {
         throw error;
       }
 
+      /**
+       * Auditoría Staff Engineer (M2): antes de este fix, este catch envolvía
+       * CUALQUIER error (constraint de BD, deadlock, timeout de red) en un
+       * InternalServerErrorException genérico sin loguear el original — el
+       * GlobalExceptionFilter solo ve el mensaje genérico nuevo, el stack
+       * real de la causa raíz se pierde para siempre. En un flujo tan
+       * sensible como reset de contraseña, eso es un punto ciego real de
+       * observabilidad.
+       */
+      this.logger.error(
+        'Error crítico en executePasswordReset',
+        error instanceof Error ? error.stack : String(error),
+      );
+
       throw new InternalServerErrorException(
         'Error crítico al procesar la actualización de credenciales',
       );
