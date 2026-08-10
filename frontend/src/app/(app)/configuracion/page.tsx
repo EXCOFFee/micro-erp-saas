@@ -18,7 +18,6 @@ interface TenantSettings {
         currency_symbol?: string;
         ticket_header?: string;
         auto_block_overdue_days?: number;
-        whatsapp_message_template?: string;
     };
 }
 
@@ -54,7 +53,6 @@ export default function ConfiguracionPage() {
     const [currencySymbol, setCurrencySymbol] = useState('');
     const [ticketHeader, setTicketHeader] = useState('');
     const [autoBlockDays, setAutoBlockDays] = useState('');
-    const [waTemplate, setWaTemplate] = useState('');
 
     // ── Empleados ─────────────────────────────────────────────────
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -86,7 +84,6 @@ export default function ConfiguracionPage() {
             setCurrencySymbol(result.settings?.currency_symbol ?? '');
             setTicketHeader(result.settings?.ticket_header ?? '');
             setAutoBlockDays(String(result.settings?.auto_block_overdue_days ?? ''));
-            setWaTemplate(result.settings?.whatsapp_message_template ?? '');
         } catch (err) {
             if (err instanceof AxiosError && err.response?.data?.message) {
                 setError(err.response.data.message);
@@ -132,7 +129,6 @@ export default function ConfiguracionPage() {
                 currency_symbol: currencySymbol || undefined,
                 ticket_header: ticketHeader || undefined,
                 auto_block_overdue_days: autoBlockDays ? Number(autoBlockDays) : undefined,
-                whatsapp_message_template: waTemplate || undefined,
             });
             setData(response.data);
             setSaved(true);
@@ -326,21 +322,6 @@ export default function ConfiguracionPage() {
                             />
                             <p className="text-xs text-muted-foreground">
                                 Bloquea automáticamente clientes que llevan más de N días con promesa vencida. El cron corre diariamente a las 08:00 ART.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="cfg-wa-template">Template mensaje WhatsApp</Label>
-                            <textarea
-                                id="cfg-wa-template"
-                                value={waTemplate}
-                                onChange={(e) => setWaTemplate(e.target.value)}
-                                disabled={!isAdmin}
-                                rows={3}
-                                placeholder={`Hola {name}, tu deuda en {business} es de {balance}.\n\nPodés verla en: {link}`}
-                                className="w-full rounded-lg px-3 py-2 text-sm bg-surface border border-border text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 resize-none disabled:opacity-60"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Variables disponibles: <code className="bg-muted px-1 rounded">{'{name}'}</code>, <code className="bg-muted px-1 rounded">{'{balance}'}</code>, <code className="bg-muted px-1 rounded">{'{business}'}</code>, <code className="bg-muted px-1 rounded">{'{link}'}</code>
                             </p>
                         </div>
                         {isAdmin && (
