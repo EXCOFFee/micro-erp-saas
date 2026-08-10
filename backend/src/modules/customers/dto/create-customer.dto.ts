@@ -6,6 +6,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MAX_AMOUNT_CENTS } from '../../transactions/dto/create-transaction.dto';
@@ -64,4 +65,14 @@ export class CreateCustomerDto {
   })
   @Type(() => Number)
   credit_limit_cents?: number;
+
+  /**
+   * Clave de idempotencia opcional (Auditoría Staff Engineer — M6).
+   * Si se reenvía el mismo valor para el mismo tenant, se devuelve el
+   * cliente ya creado en vez de duplicarlo — protege contra doble-submit
+   * (doble click, reintento de red) en el alta de un cliente.
+   */
+  @IsOptional()
+  @IsUUID('4', { message: 'La clave de idempotencia debe ser un UUID válido' })
+  idempotency_key?: string;
 }
