@@ -1,4 +1,16 @@
+allowBuilds:
+  '@nestjs/core': true
+  bcrypt: true
+  cpu-features: true
+  msgpackr-extract: true
+  protobufjs: true
+  ssh2: true
+  unrs-resolver: true
+
 onlyBuiltDependencies:
   - '@nestjs/core'
   - bcrypt
   - unrs-resolver
+
+overrides:
+  path-to-regexp: '>=8.4.0'
