@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { AuthShell } from '@/components/AuthShell';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -41,12 +42,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md shadow-md">
-        <CardHeader>
-          <CardTitle>Recuperar Contraseña</CardTitle>
+    <AuthShell>
+      <Card>
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-2xl">Micro ERP</CardTitle>
           <CardDescription>
-            Ingresa tu correo corporativo para recibir un enlace seguro de recuperación.
+            Ingresá tu email y te mandamos un link para recuperar tu contraseña.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -66,7 +67,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             {feedback && (
-              <div className="rounded bg-blue-50 p-3 text-sm text-blue-800">
+              <div role="status" aria-live="polite" className="rounded-md bg-success/10 border border-success/20 p-3 text-sm text-success-text">
                 {feedback}
               </div>
             )}
@@ -77,12 +78,16 @@ export default function ForgotPasswordPage() {
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            <Link className="underline" href="/login">
+            <Link href="/login" className="text-primary underline-offset-4 hover:underline">
               Volver al inicio de sesión
+            </Link>
+            {' · '}
+            <Link href="/register" className="text-primary underline-offset-4 hover:underline">
+              Registrar comercio
             </Link>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthShell>
   );
 }

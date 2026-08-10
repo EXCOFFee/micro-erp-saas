@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AuthShell } from '@/components/AuthShell';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -89,18 +90,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-sm border-border bg-card">
+    <AuthShell>
+      <Card className="border-border bg-card">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-2xl">Micro ERP</CardTitle>
-          <CardDescription>Acceso corporativo seguro</CardDescription>
+          <CardDescription>Iniciá sesión para seguir tu libreta</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             
             {/* Mensaje de Error (Feedback Visual) */}
             {errorMsg && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md animate-fade-in font-medium">
+              <div role="alert" className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md animate-fade-in font-medium">
                 {errorMsg}
               </div>
             )}
@@ -187,6 +188,6 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </AuthShell>
   );
 }
