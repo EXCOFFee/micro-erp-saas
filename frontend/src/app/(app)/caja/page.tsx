@@ -224,8 +224,12 @@ export default function CajaPage() {
                 </div>
 
                 {/* Tabs — altura fija de 44px (WCAG 2.5.5), no depende de la métrica de la fuente */}
-                <div className="flex gap-1 p-1 rounded-lg bg-surface border border-border w-fit">
+                <div role="tablist" aria-label="Secciones de caja" className="flex gap-1 p-1 rounded-lg bg-surface border border-border w-fit">
                     <button
+                        id="tab-turno"
+                        role="tab"
+                        aria-selected={tab === 'turno'}
+                        aria-controls="panel-turno"
                         onClick={() => setTab('turno')}
                         className={`h-11 flex items-center px-4 rounded-md text-sm font-medium transition-colors ${
                             tab === 'turno'
@@ -237,6 +241,10 @@ export default function CajaPage() {
                     </button>
                     {isAdmin && (
                         <button
+                            id="tab-historial"
+                            role="tab"
+                            aria-selected={tab === 'historial'}
+                            aria-controls="panel-historial"
                             onClick={() => setTab('historial')}
                             className={`h-11 flex items-center px-4 rounded-md text-sm font-medium transition-colors ${
                                 tab === 'historial'
@@ -252,7 +260,7 @@ export default function CajaPage() {
 
             {/* ── TAB: TURNO ACTUAL ─────────────────────────────────────────── */}
             {tab === 'turno' && summary && (
-                <>
+                <div id="panel-turno" role="tabpanel" aria-labelledby="tab-turno" className="space-y-6">
                     {/* Resultado del último cierre */}
                     {closeResult && (
                         <div className={`border border-border bg-surface rounded-xl px-4 py-3 text-sm font-medium ${discrepancyColor}`}>
@@ -264,7 +272,7 @@ export default function CajaPage() {
                         // MODO: CAJA CERRADA
                         <div className="flex flex-col items-center justify-center p-12 bg-surface/30 border border-dashed border-border rounded-2xl">
                             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                                <span className="text-2xl">🔒</span>
+                                <span className="text-2xl" aria-hidden="true">🔒</span>
                             </div>
                             <h3 className="text-lg font-semibold text-foreground mb-2">La caja está cerrada</h3>
                             <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
@@ -416,12 +424,12 @@ export default function CajaPage() {
                             )}
                         </>
                     )}
-                </>
+                </div>
             )}
 
             {/* ── TAB: HISTORIAL ────────────────────────────────────────────── */}
             {tab === 'historial' && isAdmin && (
-                <>
+                <div id="panel-historial" role="tabpanel" aria-labelledby="tab-historial" className="space-y-6">
                     {historyLoading ? (
                         <div className="flex items-center justify-center h-32">
                             <svg className="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24">
@@ -527,7 +535,7 @@ export default function CajaPage() {
                             )}
                         </Card>
                     )}
-                </>
+                </div>
             )}
         </div>
     );

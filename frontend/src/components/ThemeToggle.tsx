@@ -58,7 +58,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted focus-visible:outline-none"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted"
     >
       <SunMoonIcon isDark={isDark} />
     </button>

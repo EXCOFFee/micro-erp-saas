@@ -33,6 +33,9 @@ export default function ErrorBoundary({
         </Button>
       </div>
       {process.env.NODE_ENV !== 'production' && (
+        // Fondo siempre negro (panel de debug estilo terminal, no reacciona
+        // al tema) — text-destructive fallaría en modo claro contra este
+        // bg fijo, así que va un rojo fijo en vez del token reactivo.
         <pre className="mt-8 p-4 bg-black/80 text-red-400 text-xs text-left overflow-auto max-w-full rounded">
           {error.message}
         </pre>

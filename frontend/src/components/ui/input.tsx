@@ -32,7 +32,7 @@ export function Input({ className, type, error, ref, ...props }: InputProps) {
         <button
           type="button"
           onClick={() => setShowPassword((v) => !v)}
-          className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="absolute right-0 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
         >
           {showPassword ? <EyeOffIcon /> : <EyeIcon />}

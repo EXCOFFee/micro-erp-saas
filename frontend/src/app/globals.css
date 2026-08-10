@@ -59,13 +59,29 @@
   --color-warning-foreground: oklch(0.286 0.047 263.4);
   --color-warning-text: oklch(0.516 0.110 73.2);
 
-  /* Oliva — "al día" / éxito (verde tierra, no esmeralda-menta) */
+  /*
+   * Oliva — "al día" / éxito (verde tierra, no esmeralda-menta).
+   * --color-success-text recalibrado en Fase 4: medido con canvas real
+   * (getComputedStyle + pixel compositing, no a ojo) contra el badge
+   * bg-success/10 tal como se renderiza sobre el fondo real de la app
+   * (peor caso encontrado, no un fondo blanco de laboratorio) — el valor
+   * original coincidía con --color-success y fallaba AA (3.76:1 medido).
+   */
   --color-success: oklch(0.514 0.067 124.1);
   --color-success-foreground: oklch(0.955 0.023 90.8);
-  --color-success-text: oklch(0.514 0.067 124.1);
+  --color-success-text: oklch(0.467 0.067 124.1);
 
-  /* Ladrillo — "vencido" / peligro (mapea al token destructive existente) */
-  --color-destructive: oklch(0.520 0.126 37.8);
+  /*
+   * Ladrillo — "vencido" / peligro. --color-destructive recalibrado en
+   * Fase 4 (mismo método que --color-success-text arriba, mismo motivo:
+   * el valor original fallaba AA medido sobre el badge bg-destructive/10
+   * real, 3.88:1). Cubre tanto texto plano/badge como el fill sólido de
+   * botón (bg-destructive + text-destructive-foreground) — verificado que
+   * el nuevo valor no degrada ese contraste (va en la misma dirección:
+   * más oscuro en claro, más claro en oscuro, ambos ya sobre un
+   * foreground casi blanco/negro).
+   */
+  --color-destructive: oklch(0.475 0.126 37.8);
   --color-destructive-foreground: oklch(0.98 0 0);
 
   /* Radius: más chatos/estampados, menos "burbuja SaaS" */
@@ -115,15 +131,16 @@
   --color-input: oklch(0.352 0.047 263.0);
   --color-ring: oklch(0.935 0.027 87.9);
 
+  /* -text recalibrado en Fase 4 (ver comentario en :root) — medido, no a ojo */
   --color-warning: oklch(0.650 0.118 76.0);
   --color-warning-foreground: oklch(0.216 0.035 266.4);
-  --color-warning-text: oklch(0.650 0.118 76.0);
+  --color-warning-text: oklch(0.676 0.118 76.0);
 
   --color-success: oklch(0.635 0.068 123.9);
   --color-success-foreground: oklch(0.216 0.035 266.4);
-  --color-success-text: oklch(0.635 0.068 123.9);
+  --color-success-text: oklch(0.705 0.068 123.9);
 
-  --color-destructive: oklch(0.646 0.126 37.9);
+  --color-destructive: oklch(0.739 0.126 37.9);
   --color-destructive-foreground: oklch(0.216 0.035 266.4);
 }
 

@@ -369,7 +369,7 @@ export default function ClienteDetallePage() {
 
     return (
         <div className="space-y-6">
-            <button onClick={() => router.push('/clientes')} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors">
+            <button onClick={() => router.push('/clientes')} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors px-2 py-3 -mx-2 -my-3">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Volver a clientes
             </button>
@@ -418,20 +418,20 @@ export default function ClienteDetallePage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-border">
-                        <Button variant="secondary" size="sm" onClick={() => openEditPanel(customer)} disabled={actionLoading === 'edit'}>
+                        <Button variant="secondary" onClick={() => openEditPanel(customer)} disabled={actionLoading === 'edit'}>
                             Editar
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={handleToggleBlock} disabled={actionLoading === 'block'}>
+                        <Button variant="secondary" onClick={handleToggleBlock} disabled={actionLoading === 'block'}>
                             {customer.is_active ? 'Bloquear' : 'Desbloquear'}
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={() => setShowPromise(!showPromise)}>
+                        <Button variant="secondary" onClick={() => setShowPromise(!showPromise)}>
                             Promesa
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={handleShareLink} disabled={actionLoading === 'share'}>
+                        <Button variant="secondary" onClick={handleShareLink} disabled={actionLoading === 'share'}>
                             Compartir url
                         </Button>
                         {isAdmin && (
-                            <Button variant="secondary" size="sm" onClick={() => setShowCreditLimit(!showCreditLimit)}>
+                            <Button variant="secondary" onClick={() => setShowCreditLimit(!showCreditLimit)}>
                                 Límite
                             </Button>
                         )}
@@ -444,9 +444,13 @@ export default function ClienteDetallePage() {
                         <p
                             className={`font-display text-4xl lg:text-5xl font-bold tracking-tight truncate ${customer.balance_cents > 0 ? 'text-destructive' : 'text-success-text'}`}
                             aria-label={
-                                customer.is_overdue
-                                    ? `Saldo vencido: ${mounted ? formatCents(customer.balance_cents) : ''}`
-                                    : undefined
+                                !mounted
+                                    ? undefined
+                                    : customer.is_overdue
+                                        ? `Saldo vencido: ${formatCents(customer.balance_cents)}`
+                                        : customer.balance_cents > 0
+                                            ? `Saldo pendiente: ${formatCents(customer.balance_cents)}`
+                                            : `Cuenta al día: ${formatCents(customer.balance_cents)}`
                             }
                         >
                             {mounted && customer.is_overdue ? (
@@ -471,7 +475,7 @@ export default function ClienteDetallePage() {
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-5">
                         <h2 className="text-base font-semibold text-foreground">Editar datos del cliente</h2>
-                        <button onClick={() => setShowEdit(false)} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                        <button onClick={() => setShowEdit(false)} className="text-muted-foreground hover:text-foreground transition-colors text-sm px-3 py-3 -mx-3 -my-3">
                             Cerrar
                         </button>
                     </div>
@@ -515,10 +519,10 @@ export default function ClienteDetallePage() {
                                 <Input id="edit-tags" value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="VIP, moroso, delivery..." />
                             </div>
                             <div className="sm:col-span-2 flex gap-2 pt-2">
-                                <Button type="submit" variant="default" size="sm" disabled={actionLoading === 'edit'}>
+                                <Button type="submit" variant="default" disabled={actionLoading === 'edit'}>
                                     {actionLoading === 'edit' ? 'Guardando...' : 'Guardar cambios'}
                                 </Button>
-                                <Button type="button" variant="secondary" size="sm" onClick={() => setShowEdit(false)}>
+                                <Button type="button" variant="secondary" onClick={() => setShowEdit(false)}>
                                     Cancelar
                                 </Button>
                             </div>
@@ -530,7 +534,7 @@ export default function ClienteDetallePage() {
             {shareLink && (
                 <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4">
                     <p className="text-foreground text-sm truncate">{shareLink}</p>
-                    <Button onClick={() => { navigator.clipboard.writeText(shareLink); }} size="sm" variant="secondary">
+                    <Button onClick={() => { navigator.clipboard.writeText(shareLink); }} variant="secondary">
                         Copiar
                     </Button>
                 </div>
