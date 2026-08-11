@@ -439,12 +439,15 @@ export default function CajaPage() {
                         </div>
                     ) : (
                         <Card className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            {/* Tabla completa desde sm — debajo de eso, Esperado/Real/Descuadre
+                                (el dato que importa de este historial) quedaban apretados o
+                                requerían scroll horizontal escondido. Fase 5. */}
+                            <div className="hidden sm:block overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-border bg-muted/10">
                                             <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Cierre</th>
-                                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Cajero</th>
+                                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Cajero</th>
                                             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Esperado</th>
                                             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Real</th>
                                             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Descuadre</th>
@@ -504,6 +507,61 @@ export default function CajaPage() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            {/* Lista apilada — debajo de sm, mismos datos que la tabla */}
+                            <div className="sm:hidden divide-y divide-border">
+                                {history.map((shift) => (
+                                    <div key={shift.id} className="px-4 py-3.5">
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                            <div>
+                                                <p className="text-sm text-foreground font-medium">
+                                                    {new Date(shift.closed_at).toLocaleDateString('es-AR')}
+                                                    <span className="text-muted-foreground font-normal">
+                                                        {' '}{new Date(shift.closed_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </p>
+                                                {shift.user?.email && (
+                                                    <p className="text-xs text-muted-foreground">{shift.user.email}</p>
+                                                )}
+                                            </div>
+                                            <span className={`shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
+                                                shift.status === 'CLOSED_OK'
+                                                    ? 'bg-success/20 text-success-text'
+                                                    : 'bg-warning/10 text-warning-text'
+                                            }`}>
+                                                {shift.status === 'CLOSED_OK' ? 'OK' : 'Descuadre'}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-right font-mono-ledger text-xs">
+                                            <div>
+                                                <p className="text-muted-foreground font-sans mb-0.5">Esperado</p>
+                                                <p className="text-foreground">{formatCents(shift.expected_cash_cents)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-muted-foreground font-sans mb-0.5">Real</p>
+                                                <p className="text-foreground">{formatCents(shift.actual_cash_cents)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-muted-foreground font-sans mb-0.5">Descuadre</p>
+                                                <p className={
+                                                    shift.discrepancy_cents === 0
+                                                        ? 'text-success-text'
+                                                        : shift.discrepancy_cents < 0
+                                                        ? 'text-destructive'
+                                                        : 'text-warning-text'
+                                                }>
+                                                    {shift.discrepancy_cents === 0
+                                                        ? '—'
+                                                        : `${shift.discrepancy_cents > 0 ? '+' : ''}${formatCents(shift.discrepancy_cents)}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {history.length === 0 && (
+                                    <p className="px-4 py-8 text-center text-muted-foreground text-sm">No hay cierres de caja registrados.</p>
+                                )}
                             </div>
 
                             {/* Paginación */}

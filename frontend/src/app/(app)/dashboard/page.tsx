@@ -279,13 +279,17 @@ export default function DashboardPage() {
                     <CardTitle className="text-base">Top 10 Morosos</CardTitle>
                     <span className="text-xs text-muted-foreground">Click para ver detalle</span>
                 </CardHeader>
-                <div className="overflow-x-auto">
+                {/* Tabla completa — desde sm (640px) para arriba. Debajo de eso, el
+                    scroll horizontal escondía "Estado" sin ninguna pista visual de
+                    que había más columnas — mala jerarquía real en el mostrador
+                    (Fase 5), no solo un problema de que "se corte". */}
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-border bg-muted/10">
                                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">#</th>
                                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Cliente</th>
-                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Teléfono</th>
+                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Teléfono</th>
                                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Deuda</th>
                                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden md:table-cell">Límite</th>
                                 <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Estado</th>
@@ -306,7 +310,7 @@ export default function DashboardPage() {
                                     <td className="px-6 py-3.5">
                                         <span className="text-sm font-medium text-foreground">{debtor.full_name}</span>
                                     </td>
-                                    <td className="px-6 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">
+                                    <td className="px-6 py-3.5 text-sm text-muted-foreground">
                                         {debtor.phone || '—'}
                                     </td>
                                     <td className="px-6 py-3.5 text-right">
@@ -335,6 +339,39 @@ export default function DashboardPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Lista apilada — debajo de sm. Mismos datos que la tabla (salvo
+                    Límite, ya oculto en tablet), sin scroll horizontal escondido. */}
+                <div className="sm:hidden divide-y divide-border">
+                    {metrics.top_debtors.map((debtor, index) => (
+                        <button
+                            key={debtor.id}
+                            onClick={() => router.push(`/clientes/${debtor.id}`)}
+                            className="w-full text-left px-4 py-3.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                        >
+                            <span className="text-xs text-muted-foreground font-mono shrink-0">
+                                {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-foreground truncate">{debtor.full_name}</p>
+                                {debtor.phone && <p className="text-xs text-muted-foreground truncate">{debtor.phone}</p>}
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="font-display text-sm font-semibold text-destructive">
+                                    {formatCents(debtor.balance_cents)}
+                                </p>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium mt-1 ${
+                                    debtor.is_active ? 'bg-success/20 text-success-text' : 'bg-destructive/20 text-destructive'
+                                }`}>
+                                    {debtor.is_active ? 'Activo' : 'Bloqueado'}
+                                </span>
+                            </div>
+                        </button>
+                    ))}
+                    {metrics.top_debtors.length === 0 && (
+                        <p className="px-4 py-8 text-center text-muted-foreground text-sm">No hay deudores registrados</p>
+                    )}
                 </div>
             </Card>
         </div>
