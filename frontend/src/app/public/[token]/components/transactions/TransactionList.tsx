@@ -1,4 +1,5 @@
 import { TransactionRow } from './TransactionRow';
+import { Card } from '@/components/ui/card';
 
 interface TransactionListProps {
     debts: Array<{ amount_cents: number; description: string | null; created_at: string }>;
@@ -14,16 +15,16 @@ export function TransactionList({ debts, payments }: TransactionListProps) {
 
     if (all.length === 0) {
         return (
-            <div className="text-center py-6 text-slate-400 text-sm">
+            <div className="text-center py-6 text-muted-foreground text-sm">
                 No hay movimientos recientes.
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2 px-1">Últimos Movimientos</h3>
-            <div className="divide-y divide-slate-100">
+        <Card className="p-5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">Últimos Movimientos</h3>
+            <div className="divide-y divide-border">
                 {all.map((tx, idx) => (
                     <TransactionRow
                         key={idx}
@@ -34,6 +35,6 @@ export function TransactionList({ debts, payments }: TransactionListProps) {
                     />
                 ))}
             </div>
-        </div>
+        </Card>
     );
 }

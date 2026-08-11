@@ -6,7 +6,7 @@ import { AxiosError } from 'axios';
 import { api } from '@/lib/api';
 import { formatCents, formatDate, formatDateShort } from '@/lib/format';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Customer, Transaction } from '@/types';
+import type { Customer, Transaction, TransactionType } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,45 @@ import { TicketPreview } from '@/components/TicketPreview';
 import type { TicketPreviewProps } from '@/components/TicketPreview';
 import { MixedPaymentModal } from '@/components/modals/MixedPaymentModal';
 import { DebtForgivenessModal } from '@/components/modals/DebtForgivenessModal';
+import { InkCircle, InkStamp } from '@/components/ledger/InkAccents';
+
+/**
+ * Etiquetas de tipo de transacción para la columna "Concepto" del historial.
+ */
+const TX_LABELS: Record<TransactionType, string> = {
+    DEBT: 'Fiado',
+    PAYMENT: 'Pago',
+    REVERSAL: 'Reversión',
+    INFLATION_ADJUSTMENT: 'Ajuste por inflación',
+    FORGIVENESS: 'Condonación',
+};
+
+/** Tipos que AUMENTAN la deuda del cliente (verificado en transactions.service.ts del backend). */
+const INCREASES_DEBT: TransactionType[] = ['DEBT', 'INFLATION_ADJUSTMENT'];
+
+/**
+ * Determina si una transacción va en "Debe" o "Haber" para el historial tipo
+ * libreta de fiado (Fase 0 del brief). DEBT/INFLATION_ADJUSTMENT aumentan
+ * deuda → Debe. PAYMENT/FORGIVENESS la reducen → Haber. REVERSAL invierte
+ * el efecto de la transacción original: revertir un Debe → Haber, revertir
+ * un Haber → Debe — para eso hace falta el tipo de la transacción original,
+ * que se busca en la misma lista ya cargada (es el historial completo del
+ * cliente, no paginado).
+ */
+function getTxDirection(
+    tx: Transaction,
+    allTx: Transaction[],
+): 'debe' | 'haber' {
+    if (tx.type === 'REVERSAL') {
+        const original = allTx.find((t) => t.id === tx.reversed_transaction_id);
+        // La lista siempre debería incluir la transacción original (historial
+        // completo del cliente); si por algún motivo no aparece, se asume
+        // "debe" para no ocultar el monto de la vista.
+        if (!original) return 'debe';
+        return INCREASES_DEBT.includes(original.type) ? 'haber' : 'debe';
+    }
+    return INCREASES_DEBT.includes(tx.type) ? 'debe' : 'haber';
+}
 
 export default function ClienteDetallePage() {
     const params = useParams();
@@ -328,17 +367,9 @@ export default function ClienteDetallePage() {
         );
     }
 
-    const txTypeLabels: Record<string, { label: string; color: string }> = {
-        DEBT: { label: 'Fiado', color: 'text-red-400' },
-        PAYMENT: { label: 'Pago', color: 'text-emerald-400' },
-        REVERSAL: { label: 'Reversión', color: 'text-amber-400' },
-        INFLATION_ADJUSTMENT: { label: 'Ajuste inflación', color: 'text-purple-400' },
-        FORGIVENESS: { label: 'Condonación', color: 'text-cyan-400' },
-    };
-
     return (
         <div className="space-y-6">
-            <button onClick={() => router.push('/clientes')} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors">
+            <button onClick={() => router.push('/clientes')} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors px-2 py-3 -mx-2 -my-3">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Volver a clientes
             </button>
@@ -348,14 +379,17 @@ export default function ClienteDetallePage() {
                     <div>
                         <div className="flex items-start justify-between gap-2">
                             <h1 className="text-2xl font-bold text-foreground leading-tight">{customer.full_name}</h1>
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                                <span className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${customer.is_active ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                <span className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${customer.is_active ? 'bg-success/10 text-success-text' : 'bg-destructive/10 text-destructive'}`}>
                                     {customer.is_active ? 'Activo' : 'Bloqueado'}
                                 </span>
                                 {customer.is_overdue && (
-                                    <span className="px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-500/10 text-amber-500">
+                                    <span className="px-2.5 py-0.5 rounded-md text-xs font-medium bg-warning/10 text-warning-text">
                                         En mora
                                     </span>
+                                )}
+                                {!customer.is_overdue && customer.balance_cents === 0 && (
+                                    <InkStamp />
                                 )}
                             </div>
                         </div>
@@ -384,20 +418,20 @@ export default function ClienteDetallePage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-border">
-                        <Button variant="secondary" size="sm" onClick={() => openEditPanel(customer)} disabled={actionLoading === 'edit'}>
+                        <Button variant="secondary" onClick={() => openEditPanel(customer)} disabled={actionLoading === 'edit'}>
                             Editar
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={handleToggleBlock} disabled={actionLoading === 'block'}>
+                        <Button variant="secondary" onClick={handleToggleBlock} disabled={actionLoading === 'block'}>
                             {customer.is_active ? 'Bloquear' : 'Desbloquear'}
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={() => setShowPromise(!showPromise)}>
+                        <Button variant="secondary" onClick={() => setShowPromise(!showPromise)}>
                             Promesa
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={handleShareLink} disabled={actionLoading === 'share'}>
+                        <Button variant="secondary" onClick={handleShareLink} disabled={actionLoading === 'share'}>
                             Compartir url
                         </Button>
                         {isAdmin && (
-                            <Button variant="secondary" size="sm" onClick={() => setShowCreditLimit(!showCreditLimit)}>
+                            <Button variant="secondary" onClick={() => setShowCreditLimit(!showCreditLimit)}>
                                 Límite
                             </Button>
                         )}
@@ -407,17 +441,32 @@ export default function ClienteDetallePage() {
                 <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="group relative overflow-hidden rounded-2xl bg-surface p-6 border border-border transition-all duration-300 ease-out hover:border-primary/30 hover:bg-surface/80 flex flex-col justify-center">
                         <p className="text-muted-foreground text-sm font-medium mb-2 uppercase tracking-wide">Saldo Actual</p>
-                        <p className={`text-4xl lg:text-5xl font-bold tracking-tight truncate ${customer.balance_cents > 0 ? 'text-destructive' : 'text-primary'}`}>
-                            {mounted ? formatCents(customer.balance_cents) : ''}
+                        <p
+                            className={`font-display text-4xl lg:text-5xl font-bold tracking-tight truncate ${customer.balance_cents > 0 ? 'text-destructive' : 'text-success-text'}`}
+                            aria-label={
+                                !mounted
+                                    ? undefined
+                                    : customer.is_overdue
+                                        ? `Saldo vencido: ${formatCents(customer.balance_cents)}`
+                                        : customer.balance_cents > 0
+                                            ? `Saldo pendiente: ${formatCents(customer.balance_cents)}`
+                                            : `Cuenta al día: ${formatCents(customer.balance_cents)}`
+                            }
+                        >
+                            {mounted && customer.is_overdue ? (
+                                <InkCircle>{formatCents(customer.balance_cents)}</InkCircle>
+                            ) : (
+                                mounted ? formatCents(customer.balance_cents) : ''
+                            )}
                         </p>
-                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
                     </div>
                     <div className="group relative overflow-hidden rounded-2xl bg-surface p-6 border border-border transition-all duration-300 ease-out hover:border-primary/30 hover:bg-surface/80 flex flex-col justify-center">
                         <p className="text-muted-foreground text-sm font-medium mb-2 uppercase tracking-wide">Límite de Crédito</p>
-                        <p className="text-4xl lg:text-5xl font-bold tracking-tight text-foreground truncate">
+                        <p className="font-display text-4xl lg:text-5xl font-bold tracking-tight text-foreground truncate">
                             {mounted ? formatCents(customer.credit_limit_cents) : ''}
                         </p>
-                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
                     </div>
                 </div>
             </div>
@@ -426,12 +475,12 @@ export default function ClienteDetallePage() {
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-5">
                         <h2 className="text-base font-semibold text-foreground">Editar datos del cliente</h2>
-                        <button onClick={() => setShowEdit(false)} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                        <button onClick={() => setShowEdit(false)} className="text-muted-foreground hover:text-foreground transition-colors text-sm px-3 py-3 -mx-3 -my-3">
                             Cerrar
                         </button>
                     </div>
                     {editSaved ? (
-                        <p className="text-primary text-sm font-medium">Cambios guardados correctamente.</p>
+                        <p className="text-success-text text-sm font-medium">Cambios guardados correctamente.</p>
                     ) : (
                         <form onSubmit={handleEditSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
@@ -470,10 +519,10 @@ export default function ClienteDetallePage() {
                                 <Input id="edit-tags" value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="VIP, moroso, delivery..." />
                             </div>
                             <div className="sm:col-span-2 flex gap-2 pt-2">
-                                <Button type="submit" variant="default" size="sm" disabled={actionLoading === 'edit'}>
+                                <Button type="submit" variant="default" disabled={actionLoading === 'edit'}>
                                     {actionLoading === 'edit' ? 'Guardando...' : 'Guardar cambios'}
                                 </Button>
-                                <Button type="button" variant="secondary" size="sm" onClick={() => setShowEdit(false)}>
+                                <Button type="button" variant="secondary" onClick={() => setShowEdit(false)}>
                                     Cancelar
                                 </Button>
                             </div>
@@ -485,7 +534,7 @@ export default function ClienteDetallePage() {
             {shareLink && (
                 <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4">
                     <p className="text-foreground text-sm truncate">{shareLink}</p>
-                    <Button onClick={() => { navigator.clipboard.writeText(shareLink); }} size="sm" variant="secondary">
+                    <Button onClick={() => { navigator.clipboard.writeText(shareLink); }} variant="secondary">
                         Copiar
                     </Button>
                 </div>
@@ -521,7 +570,7 @@ export default function ClienteDetallePage() {
                             type="button"
                             onClick={() => submitTx('DEBT')}
                             disabled={actionLoading === 'tx' || !txAmount}
-                            className="bg-[oklch(0.60_0.15_40)] text-white hover:bg-[oklch(0.55_0.15_40)] shadow-none flex-1 lg:px-6"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-none flex-1 lg:px-6"
                         >
                             {actionLoading === 'tx' ? '...' : 'Fiado'}
                         </Button>
@@ -541,7 +590,7 @@ export default function ClienteDetallePage() {
                         type="button" 
                         variant="secondary"
                         onClick={() => setShowMixedPayment(true)}
-                        className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-600 border border-emerald-500/20"
+                        className="bg-success/10 text-success-text hover:bg-success/20 border border-success/20"
                     >
                         Pago Mixto (Efectivo + Transferencia)
                     </Button>
@@ -563,16 +612,16 @@ export default function ClienteDetallePage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm print:bg-transparent print:backdrop-blur-none">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto print:shadow-none print:rounded-none print:max-w-none print:mx-0">
                         <TicketPreview {...ticketData} />
-                        <div className="flex gap-3 p-4 border-t border-gray-200 print:hidden">
+                        <div className="flex gap-3 p-4 border-t border-border print:hidden">
                             <button
                                 onClick={() => window.print()}
-                                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl text-lg transition-colors"
+                                className="flex-1 flex items-center justify-center gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold py-3 px-6 rounded-xl text-lg transition-colors"
                             >
                                 🖨️ Imprimir Ticket
                             </button>
                             <button
                                 onClick={() => setTicketData(null)}
-                                className="px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors font-medium"
+                                className="px-4 py-3 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors font-medium"
                             >
                                 Cerrar
                             </button>
@@ -627,23 +676,39 @@ export default function ClienteDetallePage() {
                         <thead>
                             <tr className="border-b border-border">
                                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Fecha</th>
-                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Tipo</th>
-                                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Monto</th>
-                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Descripción</th>
+                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Concepto</th>
+                                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Debe</th>
+                                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Haber</th>
                                 <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Acción</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                             {Array.isArray(transactions) && transactions.map((tx) => {
-                                const typeInfo = txTypeLabels[tx.type] || { label: tx.type, color: 'text-muted-foreground' };
+                                const label = TX_LABELS[tx.type] ?? tx.type;
+                                const direction = getTxDirection(tx, transactions);
                                 return (
                                     <tr key={tx.id} className={`hover:bg-muted/30 transition-colors ${tx.is_reversed ? 'opacity-40 line-through' : ''}`}>
-                                        <td className="px-6 py-3.5 text-sm text-foreground">{mounted ? formatDate(tx.created_at) : ''}</td>
+                                        <td className="px-6 py-3.5 text-sm text-foreground whitespace-nowrap">{mounted ? formatDate(tx.created_at) : ''}</td>
                                         <td className="px-6 py-3.5">
-                                            <span className={`text-sm font-medium ${typeInfo.color}`}>{typeInfo.label}</span>
+                                            <span className="text-sm font-medium text-foreground">{label}</span>
+                                            {tx.description && (
+                                                <span className="block text-xs text-muted-foreground">{tx.description}</span>
+                                            )}
                                         </td>
-                                        <td className="px-6 py-3.5 text-right text-sm font-semibold text-foreground">{mounted ? formatCents(tx.amount_cents) : ''}</td>
-                                        <td className="px-6 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{tx.description || '—'}</td>
+                                        <td className="px-6 py-3.5 text-right font-mono-ledger text-sm font-semibold">
+                                            {direction === 'debe' ? (
+                                                <span className="text-destructive">{mounted ? formatCents(tx.amount_cents) : ''}</span>
+                                            ) : (
+                                                <span className="text-muted-foreground/40" aria-hidden="true">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-3.5 text-right font-mono-ledger text-sm font-semibold">
+                                            {direction === 'haber' ? (
+                                                <span className="text-success-text">{mounted ? formatCents(tx.amount_cents) : ''}</span>
+                                            ) : (
+                                                <span className="text-muted-foreground/40" aria-hidden="true">—</span>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-3.5 text-center">
                                             {!tx.is_reversed && (tx.type === 'DEBT' || tx.type === 'PAYMENT') && (
                                                 <Button

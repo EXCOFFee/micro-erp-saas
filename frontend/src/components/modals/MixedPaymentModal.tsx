@@ -68,9 +68,8 @@ export function MixedPaymentModal({ isOpen, onClose, onSubmit, isLoading }: Mixe
                 min="0"
                 {...register('cash_amount', { valueAsNumber: true })}
                 disabled={isLoading}
-                className={errors.cash_amount ? 'border-destructive' : ''}
+                error={errors.cash_amount?.message}
               />
-              {errors.cash_amount && <p className="text-xs text-destructive">{errors.cash_amount.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -82,9 +81,8 @@ export function MixedPaymentModal({ isOpen, onClose, onSubmit, isLoading }: Mixe
                 min="0"
                 {...register('transfer_amount', { valueAsNumber: true })}
                 disabled={isLoading}
-                className={errors.transfer_amount ? 'border-destructive' : ''}
+                error={errors.transfer_amount?.message}
               />
-              {errors.transfer_amount && <p className="text-xs text-destructive">{errors.transfer_amount.message}</p>}
             </div>
 
             <div className="space-y-2">

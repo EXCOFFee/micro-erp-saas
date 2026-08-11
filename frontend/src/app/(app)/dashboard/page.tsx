@@ -73,38 +73,38 @@ export default function DashboardPage() {
             <div className="space-y-8 animate-pulse">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <div className="h-8 bg-slate-800 rounded-lg w-40 mb-2"></div>
-                        <div className="h-4 bg-slate-800 rounded-lg w-32"></div>
+                        <div className="h-8 bg-muted rounded-lg w-40 mb-2"></div>
+                        <div className="h-4 bg-muted rounded-lg w-32"></div>
                     </div>
-                    {isAdmin && <div className="h-10 bg-slate-800 rounded-xl w-48"></div>}
+                    {isAdmin && <div className="h-10 bg-muted rounded-xl w-48"></div>}
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 h-28"></div>
+                        <div key={i} className="bg-muted/50 border border-border rounded-2xl p-4 sm:p-5 h-28"></div>
                     ))}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 h-28"></div>
+                        <div key={i} className="bg-muted/50 border border-border rounded-2xl p-4 sm:p-5 h-28"></div>
                     ))}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 h-28"></div>
+                        <div key={i} className="bg-muted/50 border border-border rounded-2xl p-4 sm:p-5 h-28"></div>
                     ))}
                 </div>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 h-64"></div>
+                <div className="bg-muted/50 border border-border rounded-2xl p-6 h-64"></div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-center">
-                <p className="text-red-400">{error}</p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-6 text-center">
+                <p className="text-destructive">{error}</p>
                 <button
                     onClick={loadMetrics}
-                    className="mt-3 px-4 py-2 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition-colors"
+                    className="mt-3 px-4 py-2 text-sm bg-destructive/20 hover:bg-destructive/30 text-destructive rounded-xl transition-colors"
                 >
                     Reintentar
                 </button>
@@ -114,19 +114,22 @@ export default function DashboardPage() {
 
     if (!metrics) return null;
 
-    // Mora ratio color: verde < 20%, ámbar 20-50%, rojo > 50%
+    // Mora ratio: verde < 20% (Normal), ámbar 20-50% (Atención), rojo > 50% (Crítico)
+    const moraLevel =
+        metrics.mora_ratio < 20 ? 'Normal' : metrics.mora_ratio < 50 ? 'Atención' : 'Crítico';
+
     const moraColor =
         metrics.mora_ratio < 20
-            ? 'bg-primary'
+            ? 'bg-success'
             : metrics.mora_ratio < 50
-            ? 'bg-amber-400'
+            ? 'bg-warning'
             : 'bg-destructive';
 
     const moraTextColor =
         metrics.mora_ratio < 20
-            ? 'text-primary'
+            ? 'text-success-text'
             : metrics.mora_ratio < 50
-            ? 'text-amber-400'
+            ? 'text-warning-text'
             : 'text-destructive';
 
     // Net balance de la semana (cobrado - fiado)
@@ -137,7 +140,7 @@ export default function DashboardPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                    <h1 className="font-display text-2xl font-bold text-foreground">Dashboard</h1>
                     <p className="text-muted-foreground text-sm mt-1">
                         {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
@@ -219,15 +222,27 @@ export default function DashboardPage() {
                     <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 sm:p-6 border border-border transition-all duration-300 ease-out hover:border-primary/30 hover:bg-surface/80">
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-sm font-medium tracking-tight text-muted-foreground">Tasa de mora</p>
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-primary">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground/5 text-primary">
                                 <IconTrend />
                             </div>
                         </div>
-                        <p className={`text-3xl font-semibold tracking-tight ${moraTextColor}`}>
-                            {metrics.mora_ratio.toFixed(1)}%
-                        </p>
-                        {/* Barra de progreso */}
-                        <div className="mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                        <div className="flex items-baseline gap-2">
+                            <p className={`font-display text-3xl font-semibold tracking-tight ${moraTextColor}`}>
+                                {metrics.mora_ratio.toFixed(1)}%
+                            </p>
+                            <span className={`text-xs font-medium uppercase tracking-wide ${moraTextColor}`}>
+                                {moraLevel}
+                            </span>
+                        </div>
+                        {/* Barra de progreso — el color nunca es el único indicador: el nivel ya está en texto arriba */}
+                        <div
+                            className="mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden"
+                            role="progressbar"
+                            aria-valuenow={Math.round(metrics.mora_ratio)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`Tasa de mora: ${metrics.mora_ratio.toFixed(1)}%, nivel ${moraLevel}`}
+                        >
                             <div
                                 className={`h-full rounded-full transition-all duration-700 ${moraColor}`}
                                 style={{ width: `${Math.min(metrics.mora_ratio, 100)}%` }}
@@ -236,7 +251,7 @@ export default function DashboardPage() {
                         <p className="text-xs text-muted-foreground mt-1.5">
                             {metrics.overdue_promises} de {metrics.active_debtors} deudores con promesa vencida
                         </p>
-                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
                     </div>
                 </div>
             </div>
@@ -245,7 +260,7 @@ export default function DashboardPage() {
             {weekNet !== 0 && (
                 <div className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border ${
                     weekNet > 0
-                        ? 'border-primary/20 bg-primary/5 text-primary'
+                        ? 'border-success/20 bg-success/5 text-success-text'
                         : 'border-destructive/20 bg-destructive/5 text-destructive'
                 }`}>
                     <span className="font-medium">Balance semanal neto:</span>
@@ -264,13 +279,17 @@ export default function DashboardPage() {
                     <CardTitle className="text-base">Top 10 Morosos</CardTitle>
                     <span className="text-xs text-muted-foreground">Click para ver detalle</span>
                 </CardHeader>
-                <div className="overflow-x-auto">
+                {/* Tabla completa — desde sm (640px) para arriba. Debajo de eso, el
+                    scroll horizontal escondía "Estado" sin ninguna pista visual de
+                    que había más columnas — mala jerarquía real en el mostrador
+                    (Fase 5), no solo un problema de que "se corte". */}
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-border bg-muted/10">
                                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">#</th>
                                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Cliente</th>
-                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Teléfono</th>
+                                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Teléfono</th>
                                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Deuda</th>
                                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden md:table-cell">Límite</th>
                                 <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Estado</th>
@@ -291,11 +310,11 @@ export default function DashboardPage() {
                                     <td className="px-6 py-3.5">
                                         <span className="text-sm font-medium text-foreground">{debtor.full_name}</span>
                                     </td>
-                                    <td className="px-6 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">
+                                    <td className="px-6 py-3.5 text-sm text-muted-foreground">
                                         {debtor.phone || '—'}
                                     </td>
                                     <td className="px-6 py-3.5 text-right">
-                                        <span className="text-sm font-semibold text-destructive">
+                                        <span className="font-display text-sm font-semibold text-destructive">
                                             {formatCents(debtor.balance_cents)}
                                         </span>
                                     </td>
@@ -304,7 +323,7 @@ export default function DashboardPage() {
                                     </td>
                                     <td className="px-6 py-3.5 text-center">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                                            debtor.is_active ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'
+                                            debtor.is_active ? 'bg-success/20 text-success-text' : 'bg-destructive/20 text-destructive'
                                         }`}>
                                             {debtor.is_active ? 'Activo' : 'Bloqueado'}
                                         </span>
@@ -320,6 +339,39 @@ export default function DashboardPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Lista apilada — debajo de sm. Mismos datos que la tabla (salvo
+                    Límite, ya oculto en tablet), sin scroll horizontal escondido. */}
+                <div className="sm:hidden divide-y divide-border">
+                    {metrics.top_debtors.map((debtor, index) => (
+                        <button
+                            key={debtor.id}
+                            onClick={() => router.push(`/clientes/${debtor.id}`)}
+                            className="w-full text-left px-4 py-3.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                        >
+                            <span className="text-xs text-muted-foreground font-mono shrink-0">
+                                {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-foreground truncate">{debtor.full_name}</p>
+                                {debtor.phone && <p className="text-xs text-muted-foreground truncate">{debtor.phone}</p>}
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="font-display text-sm font-semibold text-destructive">
+                                    {formatCents(debtor.balance_cents)}
+                                </p>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium mt-1 ${
+                                    debtor.is_active ? 'bg-success/20 text-success-text' : 'bg-destructive/20 text-destructive'
+                                }`}>
+                                    {debtor.is_active ? 'Activo' : 'Bloqueado'}
+                                </span>
+                            </div>
+                        </button>
+                    ))}
+                    {metrics.top_debtors.length === 0 && (
+                        <p className="px-4 py-8 text-center text-muted-foreground text-sm">No hay deudores registrados</p>
+                    )}
                 </div>
             </Card>
         </div>
@@ -346,17 +398,17 @@ function KpiCard({
             <div className="flex items-center justify-between">
                 <p className="text-sm font-medium tracking-tight text-muted-foreground">{label}</p>
                 <div className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-300 group-hover:bg-primary/10 ${
-                    accent ? 'bg-primary/10 text-primary' : 'bg-white/5 text-primary'
+                    accent ? 'bg-primary/10 text-primary' : 'bg-foreground/5 text-primary'
                 }`}>
                     {icon}
                 </div>
             </div>
             <div className="mt-4 flex items-baseline gap-3">
-                <h3 className={`text-2xl sm:text-3xl font-semibold tracking-tight ${accent ? 'text-primary' : 'text-foreground'}`}>
+                <h3 className={`font-display text-2xl sm:text-3xl font-semibold tracking-tight ${accent ? 'text-primary' : 'text-foreground'}`}>
                     {value}
                 </h3>
             </div>
-            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
         </div>
     );
 }

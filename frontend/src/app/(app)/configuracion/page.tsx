@@ -246,10 +246,14 @@ export default function ConfiguracionPage() {
                     <p className="text-muted-foreground text-sm mt-1">{data?.tenant_name}</p>
                 </div>
 
-                <div className="flex gap-1 p-1 rounded-lg bg-surface border border-border w-fit">
+                <div role="tablist" aria-label="Secciones de configuración" className="flex gap-1 p-1 rounded-lg bg-surface border border-border w-fit">
                     <button
+                        id="tab-ajustes"
+                        role="tab"
+                        aria-selected={tab === 'ajustes'}
+                        aria-controls="panel-ajustes"
                         onClick={() => setTab('ajustes')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        className={`h-11 flex items-center px-4 rounded-md text-sm font-medium transition-colors ${
                             tab === 'ajustes' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
@@ -257,8 +261,12 @@ export default function ConfiguracionPage() {
                     </button>
                     {isAdmin && (
                         <button
+                            id="tab-empleados"
+                            role="tab"
+                            aria-selected={tab === 'empleados'}
+                            aria-controls="panel-empleados"
                             onClick={() => setTab('empleados')}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                            className={`h-11 flex items-center px-4 rounded-md text-sm font-medium transition-colors ${
                                 tab === 'empleados' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
                             }`}
                         >
@@ -270,7 +278,7 @@ export default function ConfiguracionPage() {
 
             {/* ── TAB: AJUSTES ─────────────────────────────────────────────── */}
             {tab === 'ajustes' && (
-                <Card className="p-6 max-w-2xl">
+                <Card id="panel-ajustes" role="tabpanel" aria-labelledby="tab-ajustes" className="p-6 max-w-2xl">
                     <h2 className="text-base font-semibold text-foreground mb-5">Ajustes del comercio</h2>
                     <form onSubmit={handleSave} className="space-y-5">
                         <div className="space-y-2">
@@ -330,7 +338,7 @@ export default function ConfiguracionPage() {
                                     {saving ? 'Guardando...' : 'Guardar cambios'}
                                 </Button>
                                 {saved && (
-                                    <span className="text-primary text-sm font-medium">Guardado</span>
+                                    <span role="status" className="text-success-text text-sm font-medium">Guardado</span>
                                 )}
                             </div>
                         )}
@@ -343,7 +351,7 @@ export default function ConfiguracionPage() {
 
             {/* ── TAB: EMPLEADOS ────────────────────────────────────────────── */}
             {tab === 'empleados' && isAdmin && (
-                <div className="space-y-4">
+                <div id="panel-empleados" role="tabpanel" aria-labelledby="tab-empleados" className="space-y-4">
                     {/* Header empleados */}
                     <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">{employees.length} empleados registrados</p>
@@ -412,14 +420,14 @@ export default function ConfiguracionPage() {
 
                     {/* Modal reset contraseña */}
                     {resetTarget && (
-                        <Card className="p-6 border-amber-500/30">
+                        <Card className="p-6 border-warning/30">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-foreground font-semibold">
                                     Resetear contraseña — {resetTarget.name}
                                 </h3>
                                 <button
                                     onClick={() => { setResetTarget(null); setNewPassword(''); }}
-                                    className="text-muted-foreground hover:text-foreground text-sm"
+                                    className="text-muted-foreground hover:text-foreground text-sm px-3 py-3 -mx-3 -my-3"
                                 >
                                     Cancelar
                                 </button>
@@ -428,14 +436,19 @@ export default function ConfiguracionPage() {
                                 La sesión activa del cajero será cerrada automáticamente.
                             </p>
                             <form onSubmit={handleResetPassword} className="flex gap-3">
-                                <Input
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                    placeholder="Nueva contraseña temporal"
-                                    className="flex-1"
-                                />
+                                <div className="flex-1 space-y-1">
+                                    <Label htmlFor="reset-pass-input" className="sr-only">
+                                        Nueva contraseña temporal para {resetTarget.name}
+                                    </Label>
+                                    <Input
+                                        id="reset-pass-input"
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        required
+                                        placeholder="Nueva contraseña temporal"
+                                    />
+                                </div>
                                 <Button type="submit" disabled={resetting}>
                                     {resetting ? 'Reseteando...' : 'Confirmar'}
                                 </Button>
@@ -484,7 +497,7 @@ export default function ConfiguracionPage() {
                                                 <td className="px-6 py-3.5 text-center">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
                                                         emp.is_active
-                                                            ? 'bg-primary/10 text-primary'
+                                                            ? 'bg-success/10 text-success-text'
                                                             : 'bg-destructive/10 text-destructive'
                                                     }`}>
                                                         {emp.is_active ? 'Activo' : 'Inactivo'}
@@ -497,13 +510,13 @@ export default function ConfiguracionPage() {
                                                             <>
                                                                 <button
                                                                     onClick={() => handleToggleEmployee(emp)}
-                                                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                                                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 px-2 py-3 -my-3"
                                                                 >
                                                                     {emp.is_active ? 'Desactivar' : 'Activar'}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => { setResetTarget(emp); setNewPassword(''); }}
-                                                                    className="text-xs text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-2"
+                                                                    className="text-xs text-warning-text hover:text-warning transition-colors underline underline-offset-2 px-2 py-3 -my-3"
                                                                 >
                                                                     Resetear pwd
                                                                 </button>

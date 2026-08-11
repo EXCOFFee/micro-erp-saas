@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AuthShell } from '@/components/AuthShell';
 
 /**
  * Página de Registro — Onboarding de nuevo comercio (CU-SAAS-01).
@@ -57,10 +58,10 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <Card className="w-full max-w-md">
+        <AuthShell>
+            <Card>
                 <CardHeader className="text-center space-y-2 pb-6">
-                    <CardTitle className="text-3xl text-primary">Micro ERP</CardTitle>
+                    <CardTitle className="text-2xl">Micro ERP</CardTitle>
                     <CardDescription>Registrá tu comercio en 30 segundos</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -116,7 +117,7 @@ export default function RegisterPage() {
                         </div>
 
                         {error && (
-                            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-destructive text-sm font-medium animate-fade-in">
+                            <div role="alert" className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-destructive text-sm font-medium animate-fade-in">
                                 {error}
                             </div>
                         )}
@@ -151,6 +152,6 @@ export default function RegisterPage() {
                     </p>
                 </CardFooter>
             </Card>
-        </div>
+        </AuthShell>
     );
 }

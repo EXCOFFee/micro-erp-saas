@@ -209,13 +209,13 @@ export default function ClientesPage() {
                                     </td>
                                     <td className="px-6 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{c.phone || '—'}</td>
                                     <td className="px-6 py-3.5 text-right">
-                                        <span className={`text-sm font-semibold ${c.balance_cents > 0 ? 'text-destructive' : 'text-primary'}`}>
+                                        <span className={`font-display text-sm font-semibold ${c.balance_cents > 0 ? 'text-destructive' : 'text-success-text'}`}>
                                             {formatCents(c.balance_cents)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-3.5 text-right text-sm text-muted-foreground hidden md:table-cell">{formatCents(c.credit_limit_cents)}</td>
                                     <td className="px-6 py-3.5 text-center">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${c.is_active ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${c.is_active ? 'bg-success/20 text-success-text' : 'bg-destructive/20 text-destructive'
                                             }`}>
                                             {c.is_active ? 'Activo' : 'Bloqueado'}
                                         </span>

@@ -18,6 +18,8 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import { AuthShell } from '@/components/AuthShell';
+import Link from 'next/link';
 
 const ResetPasswordSchema = z
   .object({
@@ -56,16 +58,26 @@ function ResetPasswordContent() {
 
   if (!token) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
-        <Card className="w-full max-w-md border-t-4 border-red-500 shadow-lg">
+      <AuthShell>
+        <Card>
           <CardHeader>
-            <CardTitle className="text-red-600">Enlace Inválido</CardTitle>
+            <CardTitle className="text-destructive!">Enlace inválido o vencido</CardTitle>
             <CardDescription>
-              No se encontró el token de seguridad en la URL.
+              Este link ya no sirve. Pedí uno nuevo para recuperar tu contraseña.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Link href="/forgot-password">
+              <Button className="w-full">Pedir un link nuevo</Button>
+            </Link>
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+                Volver al inicio de sesión
+              </Link>
+            </div>
+          </CardContent>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
@@ -90,7 +102,7 @@ function ResetPasswordContent() {
 
       setFeedback({
         type: 'success',
-        message: 'Credenciales actualizadas. Redirigiendo al login...',
+        message: 'Contraseña actualizada. Redirigiendo al login...',
       });
       setTimeout(() => router.push('/login'), 3000);
     } catch (error: unknown) {
@@ -108,13 +120,11 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md shadow-md">
-        <CardHeader>
-          <CardTitle>Restablecer Contraseña</CardTitle>
-          <CardDescription>
-            Ingresa tu nueva credencial de acceso corporativo.
-          </CardDescription>
+    <AuthShell>
+      <Card>
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-2xl">Micro ERP</CardTitle>
+          <CardDescription>Elegí tu nueva contraseña.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -124,13 +134,9 @@ function ResetPasswordContent() {
                 id="new_password"
                 type="password"
                 disabled={isLoading || feedback?.type === 'success'}
+                error={errors.new_password?.message}
                 {...register('new_password')}
               />
-              {errors.new_password && (
-                <p className="text-xs text-red-500">
-                  {errors.new_password.message}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -139,18 +145,20 @@ function ResetPasswordContent() {
                 id="confirm_password"
                 type="password"
                 disabled={isLoading || feedback?.type === 'success'}
+                error={errors.confirm_password?.message}
                 {...register('confirm_password')}
               />
-              {errors.confirm_password && (
-                <p className="text-xs text-red-500">
-                  {errors.confirm_password.message}
-                </p>
-              )}
             </div>
 
             {feedback && (
               <div
-                className={`rounded p-3 text-sm ${feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                role="alert"
+                aria-live="polite"
+                className={
+                  feedback.type === 'success'
+                    ? 'rounded-md border border-success/20 bg-success/10 p-3 text-sm text-success-text'
+                    : 'rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive'
+                }
               >
                 {feedback.message}
               </div>
@@ -161,25 +169,25 @@ function ResetPasswordContent() {
               className="w-full"
               disabled={isLoading || feedback?.type === 'success'}
             >
-              {isLoading ? 'Asegurando credenciales...' : 'Guardar Contraseña'}
+              {isLoading ? 'Guardando...' : 'Guardar Contraseña'}
             </Button>
           </form>
         </CardContent>
       </Card>
-    </div>
+    </AuthShell>
   );
 }
 
 function ResetPasswordFallback() {
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md shadow-md">
-        <CardHeader>
-          <CardTitle>Restablecer Contraseña</CardTitle>
-          <CardDescription>Cargando token de seguridad...</CardDescription>
+    <AuthShell>
+      <Card>
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-2xl">Micro ERP</CardTitle>
+          <CardDescription>Cargando...</CardDescription>
         </CardHeader>
       </Card>
-    </div>
+    </AuthShell>
   );
 }
 

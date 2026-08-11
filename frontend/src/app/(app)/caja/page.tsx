@@ -198,10 +198,10 @@ export default function CajaPage() {
         closeResult === null
             ? ''
             : closeResult.discrepancy_cents === 0
-            ? 'text-primary'
+            ? 'text-success-text'
             : closeResult.discrepancy_cents < 0
             ? 'text-destructive'
-            : 'text-amber-400';
+            : 'text-warning-text';
 
     const discrepancyLabel =
         closeResult === null
@@ -223,11 +223,15 @@ export default function CajaPage() {
                     <p className="text-muted-foreground text-sm mt-1">Arqueo y cierre de turno</p>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-1 p-1 rounded-lg bg-surface border border-border w-fit">
+                {/* Tabs — altura fija de 44px (WCAG 2.5.5), no depende de la métrica de la fuente */}
+                <div role="tablist" aria-label="Secciones de caja" className="flex gap-1 p-1 rounded-lg bg-surface border border-border w-fit">
                     <button
+                        id="tab-turno"
+                        role="tab"
+                        aria-selected={tab === 'turno'}
+                        aria-controls="panel-turno"
                         onClick={() => setTab('turno')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        className={`h-11 flex items-center px-4 rounded-md text-sm font-medium transition-colors ${
                             tab === 'turno'
                                 ? 'bg-primary/10 text-primary'
                                 : 'text-muted-foreground hover:text-foreground'
@@ -237,8 +241,12 @@ export default function CajaPage() {
                     </button>
                     {isAdmin && (
                         <button
+                            id="tab-historial"
+                            role="tab"
+                            aria-selected={tab === 'historial'}
+                            aria-controls="panel-historial"
                             onClick={() => setTab('historial')}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                            className={`h-11 flex items-center px-4 rounded-md text-sm font-medium transition-colors ${
                                 tab === 'historial'
                                     ? 'bg-primary/10 text-primary'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -252,7 +260,7 @@ export default function CajaPage() {
 
             {/* ── TAB: TURNO ACTUAL ─────────────────────────────────────────── */}
             {tab === 'turno' && summary && (
-                <>
+                <div id="panel-turno" role="tabpanel" aria-labelledby="tab-turno" className="space-y-6">
                     {/* Resultado del último cierre */}
                     {closeResult && (
                         <div className={`border border-border bg-surface rounded-xl px-4 py-3 text-sm font-medium ${discrepancyColor}`}>
@@ -264,7 +272,7 @@ export default function CajaPage() {
                         // MODO: CAJA CERRADA
                         <div className="flex flex-col items-center justify-center p-12 bg-surface/30 border border-dashed border-border rounded-2xl">
                             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                                <span className="text-2xl">🔒</span>
+                                <span className="text-2xl" aria-hidden="true">🔒</span>
                             </div>
                             <h3 className="text-lg font-semibold text-foreground mb-2">La caja está cerrada</h3>
                             <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
@@ -272,7 +280,7 @@ export default function CajaPage() {
                             </p>
                             
                             {!showOpen ? (
-                                <Button onClick={() => setShowOpen(true)} size="lg" className="px-8">
+                                <Button onClick={() => setShowOpen(true)} className="h-14 px-10 text-base">
                                     Abrir turno de caja
                                 </Button>
                             ) : (
@@ -292,10 +300,10 @@ export default function CajaPage() {
                                             <p className="text-xs text-muted-foreground">Dinero base para dar cambio</p>
                                         </div>
                                         <div className="flex gap-3 pt-2">
-                                            <Button type="submit" disabled={opening} className="flex-1">
+                                            <Button type="submit" disabled={opening} size="lg" className="flex-1">
                                                 {opening ? 'Abriendo...' : 'Confirmar Apertura'}
                                             </Button>
-                                            <Button type="button" onClick={() => setShowOpen(false)} variant="secondary">
+                                            <Button type="button" onClick={() => setShowOpen(false)} variant="secondary" size="lg">
                                                 Cancelar
                                             </Button>
                                         </div>
@@ -307,20 +315,25 @@ export default function CajaPage() {
                         // MODO: CAJA ABIERTA
                         <>
                             {/* KPI Cards del turno */}
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
-                                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Cobrado este turno</p>
-                                    <p className="text-3xl font-bold text-primary">{formatCents(summary.expected_cash_cents)}</p>
-                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Efectivo este turno</p>
+                                    <p className="font-display text-3xl font-bold text-primary">{formatCents(summary.expected_cash_cents)}</p>
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
+                                </div>
+                                <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
+                                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Transferencias</p>
+                                    <p className="font-display text-3xl font-bold text-foreground">{formatCents(summary.transfer_total_cents)}</p>
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
                                 </div>
                                 <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30">
                                     <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Pagos registrados</p>
-                                    <p className="text-3xl font-bold text-foreground">{summary.payment_count}</p>
-                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                                    <p className="font-display text-3xl font-bold text-foreground">{summary.payment_count}</p>
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
                                 </div>
                                 <div className="group relative overflow-hidden rounded-2xl bg-surface p-5 border border-border transition-all duration-300 ease-out hover:border-primary/30 col-span-2 lg:col-span-1">
                                     <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-3">Inicio de turno</p>
-                                    <p className="text-lg font-semibold text-foreground">
+                                    <p className="font-display text-lg font-semibold text-foreground">
                                         {summary.opened_at
                                             ? new Date(summary.opened_at).toLocaleString('es-AR', {
                                                   day: '2-digit',
@@ -330,7 +343,7 @@ export default function CajaPage() {
                                               })
                                             : '—'}
                                     </p>
-                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+                                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/5" />
                                 </div>
                             </div>
 
@@ -357,7 +370,7 @@ export default function CajaPage() {
                                         </div>
                                         <button
                                             onClick={() => setShowClose(false)}
-                                            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+                                            className="text-muted-foreground hover:text-foreground transition-colors text-sm px-3 py-3 -mx-3 -my-3"
                                         >
                                             Cancelar
                                         </button>
@@ -399,10 +412,10 @@ export default function CajaPage() {
                                             />
                                         </div>
                                         <div className="sm:col-span-2 flex gap-3 pt-1">
-                                            <Button type="submit" disabled={closing} className="flex-1">
+                                            <Button type="submit" disabled={closing} size="lg" className="flex-1">
                                                 {closing ? 'Cerrando...' : 'Confirmar cierre de turno'}
                                             </Button>
-                                            <Button type="button" onClick={() => setShowClose(false)} variant="secondary">
+                                            <Button type="button" onClick={() => setShowClose(false)} variant="secondary" size="lg">
                                                 Cancelar
                                             </Button>
                                         </div>
@@ -411,12 +424,12 @@ export default function CajaPage() {
                             )}
                         </>
                     )}
-                </>
+                </div>
             )}
 
             {/* ── TAB: HISTORIAL ────────────────────────────────────────────── */}
             {tab === 'historial' && isAdmin && (
-                <>
+                <div id="panel-historial" role="tabpanel" aria-labelledby="tab-historial" className="space-y-6">
                     {historyLoading ? (
                         <div className="flex items-center justify-center h-32">
                             <svg className="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24">
@@ -426,12 +439,15 @@ export default function CajaPage() {
                         </div>
                     ) : (
                         <Card className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            {/* Tabla completa desde sm — debajo de eso, Esperado/Real/Descuadre
+                                (el dato que importa de este historial) quedaban apretados o
+                                requerían scroll horizontal escondido. Fase 5. */}
+                            <div className="hidden sm:block overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-border bg-muted/10">
                                             <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Cierre</th>
-                                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Cajero</th>
+                                            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Cajero</th>
                                             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Esperado</th>
                                             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Real</th>
                                             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-3">Descuadre</th>
@@ -452,19 +468,19 @@ export default function CajaPage() {
                                                 <td className="px-6 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">
                                                     {shift.user?.email ?? '—'}
                                                 </td>
-                                                <td className="px-6 py-3.5 text-right text-sm text-foreground">
+                                                <td className="px-6 py-3.5 text-right font-mono-ledger text-sm text-foreground">
                                                     {formatCents(shift.expected_cash_cents)}
                                                 </td>
-                                                <td className="px-6 py-3.5 text-right text-sm text-foreground">
+                                                <td className="px-6 py-3.5 text-right font-mono-ledger text-sm text-foreground">
                                                     {formatCents(shift.actual_cash_cents)}
                                                 </td>
-                                                <td className="px-6 py-3.5 text-right text-sm font-semibold">
+                                                <td className="px-6 py-3.5 text-right font-mono-ledger text-sm font-semibold">
                                                     <span className={
                                                         shift.discrepancy_cents === 0
-                                                            ? 'text-primary'
+                                                            ? 'text-success-text'
                                                             : shift.discrepancy_cents < 0
                                                             ? 'text-destructive'
-                                                            : 'text-amber-400'
+                                                            : 'text-warning-text'
                                                     }>
                                                         {shift.discrepancy_cents === 0
                                                             ? '—'
@@ -474,8 +490,8 @@ export default function CajaPage() {
                                                 <td className="px-6 py-3.5 text-center">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
                                                         shift.status === 'CLOSED_OK'
-                                                            ? 'bg-primary/20 text-primary'
-                                                            : 'bg-amber-500/10 text-amber-400'
+                                                            ? 'bg-success/20 text-success-text'
+                                                            : 'bg-warning/10 text-warning-text'
                                                     }`}>
                                                         {shift.status === 'CLOSED_OK' ? 'OK' : 'Descuadre'}
                                                     </span>
@@ -493,27 +509,80 @@ export default function CajaPage() {
                                 </table>
                             </div>
 
+                            {/* Lista apilada — debajo de sm, mismos datos que la tabla */}
+                            <div className="sm:hidden divide-y divide-border">
+                                {history.map((shift) => (
+                                    <div key={shift.id} className="px-4 py-3.5">
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                            <div>
+                                                <p className="text-sm text-foreground font-medium">
+                                                    {new Date(shift.closed_at).toLocaleDateString('es-AR')}
+                                                    <span className="text-muted-foreground font-normal">
+                                                        {' '}{new Date(shift.closed_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </p>
+                                                {shift.user?.email && (
+                                                    <p className="text-xs text-muted-foreground">{shift.user.email}</p>
+                                                )}
+                                            </div>
+                                            <span className={`shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
+                                                shift.status === 'CLOSED_OK'
+                                                    ? 'bg-success/20 text-success-text'
+                                                    : 'bg-warning/10 text-warning-text'
+                                            }`}>
+                                                {shift.status === 'CLOSED_OK' ? 'OK' : 'Descuadre'}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-right font-mono-ledger text-xs">
+                                            <div>
+                                                <p className="text-muted-foreground font-sans mb-0.5">Esperado</p>
+                                                <p className="text-foreground">{formatCents(shift.expected_cash_cents)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-muted-foreground font-sans mb-0.5">Real</p>
+                                                <p className="text-foreground">{formatCents(shift.actual_cash_cents)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-muted-foreground font-sans mb-0.5">Descuadre</p>
+                                                <p className={
+                                                    shift.discrepancy_cents === 0
+                                                        ? 'text-success-text'
+                                                        : shift.discrepancy_cents < 0
+                                                        ? 'text-destructive'
+                                                        : 'text-warning-text'
+                                                }>
+                                                    {shift.discrepancy_cents === 0
+                                                        ? '—'
+                                                        : `${shift.discrepancy_cents > 0 ? '+' : ''}${formatCents(shift.discrepancy_cents)}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {history.length === 0 && (
+                                    <p className="px-4 py-8 text-center text-muted-foreground text-sm">No hay cierres de caja registrados.</p>
+                                )}
+                            </div>
+
                             {/* Paginación */}
                             {totalPages > 1 && (
                                 <div className="flex items-center justify-between px-6 py-3 border-t border-border">
                                     <p className="text-xs text-muted-foreground">
                                         {historyTotal} turnos en total
                                     </p>
-                                    <div className="flex gap-2">
+                                    <div className="flex items-center gap-2">
                                         <Button
                                             variant="secondary"
-                                            size="sm"
                                             onClick={() => loadHistory(historyPage - 1)}
                                             disabled={historyPage <= 1 || historyLoading}
                                         >
                                             Anterior
                                         </Button>
-                                        <span className="px-3 py-1 text-xs text-muted-foreground self-center">
+                                        <span className="px-3 text-xs text-muted-foreground">
                                             {historyPage} / {totalPages}
                                         </span>
                                         <Button
                                             variant="secondary"
-                                            size="sm"
                                             onClick={() => loadHistory(historyPage + 1)}
                                             disabled={historyPage >= totalPages || historyLoading}
                                         >
@@ -524,7 +593,7 @@ export default function CajaPage() {
                             )}
                         </Card>
                     )}
-                </>
+                </div>
             )}
         </div>
     );

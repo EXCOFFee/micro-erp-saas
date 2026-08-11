@@ -58,14 +58,16 @@ export function DebtForgivenessModal({ isOpen, onClose, onSubmit, isLoading, cur
               <select
               id="action_type"
               {...register('action_type')}
-              className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isLoading}
+              aria-invalid={!!errors.action_type}
+              aria-describedby={errors.action_type ? 'action_type-error' : undefined}
             >
               <option value="WRITEOFF" className="bg-background text-foreground">Incobrable (Pérdida)</option>
               <option value="EXCHANGE" className="bg-background text-foreground">Canje (Intercambio de bienes/servicios)</option>
               <option value="DISCOUNT" className="bg-background text-foreground">Descuento Especial</option>
             </select>
-              {errors.action_type && <p className="text-xs text-destructive">{errors.action_type.message}</p>}
+              {errors.action_type && <p id="action_type-error" role="alert" className="text-xs text-destructive">{errors.action_type.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -77,8 +79,10 @@ export function DebtForgivenessModal({ isOpen, onClose, onSubmit, isLoading, cur
                 placeholder="Explique el motivo detalladamente..."
                 rows={4}
                 className={`flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${errors.reason ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}`}
+                aria-invalid={!!errors.reason}
+                aria-describedby={errors.reason ? 'reason-error' : undefined}
               />
-              {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
+              {errors.reason && <p id="reason-error" role="alert" className="text-xs text-destructive">{errors.reason.message}</p>}
             </div>
 
             <div className="pt-4 border-t border-border flex gap-3">
