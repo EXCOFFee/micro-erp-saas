@@ -120,7 +120,6 @@ En lugar de un arqueo "informal" sin estado persisente, los turnos se vuelven **
   "logo_url": "https://...",
   "enabled_payment_methods": ["cash", "transfer", "qr"],
   "auto_block_overdue_days": 7,
-  "whatsapp_message_template": "Hola {name}, tu saldo es {balance}. Link: {link}",
   "print_mode": "thermal_80mm"
 }
 ```

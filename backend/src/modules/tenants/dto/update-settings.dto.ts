@@ -58,16 +58,6 @@ export class UpdateSettingsDto {
   auto_block_overdue_days?: number;
 
   /**
-   * Template del mensaje de WhatsApp compartido con el cliente.
-   * Variables disponibles: {name}, {balance}, {business}, {link}.
-   * Ej: "Hola {name}, tu deuda en {business} es de {balance}. Podés verla en: {link}"
-   */
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  whatsapp_message_template?: string;
-
-  /**
    * Métodos de pago habilitados para el comercio (spec_expansion_v2 — Fase 3).
    *
    * Ej: ["CASH", "TRANSFER"] — acepta efectivo y transferencia.

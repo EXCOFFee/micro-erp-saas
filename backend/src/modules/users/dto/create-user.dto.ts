@@ -26,6 +26,9 @@ export class CreateUserDto {
    * Password temporal del cajero.
    * El Admin lo comunica al empleado, quien idealmente debería
    * cambiarlo en su primer login (funcionalidad futura CU-SAAS-05).
+   *
+   * Auditoría Staff Engineer (A3): @MaxLength(72) — límite real de bcrypt,
+   * ver login.dto.ts para el detalle completo del razonamiento.
    */
   @IsStrongPassword(
     {
@@ -40,6 +43,9 @@ export class CreateUserDto {
         'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo',
     },
   )
+  @MaxLength(72, {
+    message: 'La contraseña no puede superar los 72 caracteres',
+  })
   password: string;
 
   @IsString()

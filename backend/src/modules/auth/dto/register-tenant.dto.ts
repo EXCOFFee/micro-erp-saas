@@ -44,6 +44,11 @@ export class RegisterTenantDto {
    *
    * @IsStrongPassword exige: mínimo 8 caracteres, 1 mayúscula,
    * 1 minúscula, 1 número y 1 símbolo.
+   *
+   * Auditoría Staff Engineer (A3): @MaxLength(72) — bcrypt trunca/ignora
+   * cualquier byte más allá del 72, así que un password más largo no gana
+   * seguridad real y solo abre la puerta a un DoS barato (forzar a bcrypt a
+   * procesar payloads de varios KB en cada intento).
    */
   @IsStrongPassword(
     {
@@ -58,6 +63,9 @@ export class RegisterTenantDto {
         'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo',
     },
   )
+  @MaxLength(72, {
+    message: 'La contraseña no puede superar los 72 caracteres',
+  })
   password: string;
 
   /**

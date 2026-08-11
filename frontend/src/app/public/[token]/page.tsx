@@ -25,9 +25,9 @@ export default async function PublicSummaryPage({ params }: { params: Promise<{ 
         throw new Error('Error interno del servidor al conectar con la API.');
     }
 
-    // 401 se agrega defensivamente: el backend en `audit/staff-review-security`
-    // (rama hermana, aún no mergeada) ya devuelve 401 para tokens inválidos/vencidos
-    // en vez de 400 — esta rama divergió antes de ese fix.
+    // 401: token inválido/expirado (UnauthorizedException del backend).
+    // 404: datos no encontrados (NotFoundException). 400 se conserva por
+    // compatibilidad con clientes/cachés viejos, aunque el backend ya no lo emite.
     if (res.status === 404 || res.status === 400 || res.status === 401) {
         notFound();
     }

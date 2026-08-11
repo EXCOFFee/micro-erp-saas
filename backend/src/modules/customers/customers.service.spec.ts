@@ -97,6 +97,20 @@ describe('CustomersService', () => {
       );
       expect(mockRepo.save).toHaveBeenCalled();
     });
+
+    it('debe devolver el cliente existente si se reenvía el mismo idempotency_key (M6)', async () => {
+      const existing = { ...mockCustomer, id: 'c-existing' };
+      (mockRepo.findOne as jest.Mock).mockResolvedValueOnce(existing);
+
+      const result = await service.create('tenant-1', {
+        full_name: 'Cliente Reenviado',
+        idempotency_key: '11111111-1111-4111-8111-111111111111',
+      });
+
+      expect(result).toBe(existing);
+      expect(mockRepo.create).not.toHaveBeenCalled();
+      expect(mockRepo.save).not.toHaveBeenCalled();
+    });
   });
 
   // ─── LISTAR CLIENTES ──────────────────────────────────────────────
