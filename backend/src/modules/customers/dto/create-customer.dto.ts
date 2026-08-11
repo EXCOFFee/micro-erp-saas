@@ -5,8 +5,11 @@ import {
   IsOptional,
   IsInt,
   Min,
+  Max,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { MAX_AMOUNT_CENTS } from '../../transactions/dto/create-transaction.dto';
 
 /**
  * DTO para alta de nuevo cliente/deudor (CU-CLI-01).
@@ -57,6 +60,19 @@ export class CreateCustomerDto {
     message: 'El límite de crédito debe ser un número entero (centavos)',
   })
   @Min(0, { message: 'El límite de crédito no puede ser negativo' })
+  @Max(MAX_AMOUNT_CENTS, {
+    message: `El límite de crédito no puede superar ${MAX_AMOUNT_CENTS} centavos`,
+  })
   @Type(() => Number)
   credit_limit_cents?: number;
+
+  /**
+   * Clave de idempotencia opcional (Auditoría Staff Engineer — M6).
+   * Si se reenvía el mismo valor para el mismo tenant, se devuelve el
+   * cliente ya creado en vez de duplicarlo — protege contra doble-submit
+   * (doble click, reintento de red) en el alta de un cliente.
+   */
+  @IsOptional()
+  @IsUUID('4', { message: 'La clave de idempotencia debe ser un UUID válido' })
+  idempotency_key?: string;
 }

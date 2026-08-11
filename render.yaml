@@ -33,5 +33,7 @@ services:
         sync: false  # https://micro-erp-demo.vercel.app
       - key: CRON_SECRET
         sync: false
+      - key: MP_WEBHOOK_SECRET
+        sync: false  # Verifica la firma HMAC de webhooks de MercadoPago. Fail-closed si falta. Set manually.
       - key: PORT
         value: 10000

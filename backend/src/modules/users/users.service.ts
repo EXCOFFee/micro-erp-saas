@@ -40,14 +40,23 @@ export class UsersService {
     tenantId: string,
     dto: CreateUserDto,
   ): Promise<Omit<User, 'password_hash' | 'tenant'>> {
-    // Verificar unicidad global del email
+    /**
+     * Auditoría Staff Engineer (M3): mensaje genérico, no confirma ni
+     * niega que el email exista. `email` es único GLOBAL (no por tenant),
+     * así que un mensaje específico ("ya está registrado") le permite a
+     * un Admin de un tenant confirmar si un email puntual tiene cuenta en
+     * CUALQUIER otro tenant — relevante acá porque los tenants son
+     * comercios que compiten entre sí en la misma zona, no equipos de una
+     * misma empresa. El status 409 se mantiene igual; la mitigación es a
+     * nivel de mensaje.
+     */
     const existing = await this.userRepository.findOne({
       where: { email: dto.email },
       select: ['id'],
     });
 
     if (existing) {
-      throw new ConflictException('El email ya está registrado');
+      throw new ConflictException('No se pudo crear el usuario');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_ROUNDS);

@@ -41,6 +41,14 @@ export class AuthController {
    */
   @Public()
   @Post('register')
+  /**
+   * Auditoría Staff Engineer (M7): el default global (100 req/60s en
+   * app.module.ts) es demasiado laxo para un endpoint que crea un Tenant +
+   * User por request — permite scripting de altas falsas a un ritmo alto.
+   * 20/min es holgado para un registro legítimo (una acción única por
+   * usuario) pero corta un abuso automatizado.
+   */
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   register(@Body() dto: RegisterTenantDto) {
     return this.authService.register(dto);
   }
@@ -61,6 +69,13 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  /**
+   * Auditoría Staff Engineer (M7): el default global (100 req/60s) alcanza
+   * para probar 100 contraseñas por minuto contra una cuenta — insuficiente
+   * para frenar fuerza bruta. 10/min por IP es el estándar razonable para
+   * login (un usuario real casi nunca falla más de un puñado de veces).
+   */
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }

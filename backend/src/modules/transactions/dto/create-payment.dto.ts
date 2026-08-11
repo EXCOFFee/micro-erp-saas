@@ -6,9 +6,11 @@ import {
   IsString,
   MaxLength,
   IsEnum,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from '../../../common/enums/payment-method.enum';
+import { MAX_AMOUNT_CENTS } from './create-transaction.dto';
 
 /**
  * DTO para registrar un pago simple con método de pago explícito (CU-TX-02 + Fase 1).
@@ -27,6 +29,9 @@ export class CreatePaymentDto {
    */
   @IsInt({ message: 'El monto debe ser un número entero (centavos)' })
   @IsPositive({ message: 'El monto debe ser mayor a 0' })
+  @Max(MAX_AMOUNT_CENTS, {
+    message: `El monto no puede superar ${MAX_AMOUNT_CENTS} centavos`,
+  })
   @Type(() => Number)
   amount_cents: number;
 
@@ -73,6 +78,9 @@ export class CreateMixedPaymentDto {
    */
   @IsInt({ message: 'El monto total debe ser un número entero (centavos)' })
   @IsPositive({ message: 'El monto total debe ser mayor a 0' })
+  @Max(MAX_AMOUNT_CENTS, {
+    message: `El monto total no puede superar ${MAX_AMOUNT_CENTS} centavos`,
+  })
   @Type(() => Number)
   total_amount_cents: number;
 
@@ -83,6 +91,9 @@ export class CreateMixedPaymentDto {
     message: 'El monto en efectivo debe ser un número entero (centavos)',
   })
   @IsPositive({ message: 'El monto en efectivo debe ser mayor a 0' })
+  @Max(MAX_AMOUNT_CENTS, {
+    message: `El monto en efectivo no puede superar ${MAX_AMOUNT_CENTS} centavos`,
+  })
   @Type(() => Number)
   cash_amount_cents: number;
 
@@ -93,6 +104,9 @@ export class CreateMixedPaymentDto {
     message: 'El monto de transferencia debe ser un número entero (centavos)',
   })
   @IsPositive({ message: 'El monto de transferencia debe ser mayor a 0' })
+  @Max(MAX_AMOUNT_CENTS, {
+    message: `El monto de transferencia no puede superar ${MAX_AMOUNT_CENTS} centavos`,
+  })
   @Type(() => Number)
   transfer_amount_cents: number;
 

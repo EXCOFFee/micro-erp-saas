@@ -13,16 +13,34 @@ export class BillingService {
 
   /**
    * Verifica la firma HMAC-SHA256 de MercadoPago.
+   *
+   * Seguridad (auditoría Staff Engineer):
+   * 1. Comparación en TIEMPO CONSTANTE (crypto.timingSafeEqual) — un `===`
+   *    entre strings compara byte a byte y corta en la primera diferencia,
+   *    filtrando por temporización cuántos bytes iniciales acertó un atacante.
+   *    Repitiendo el ataque se puede reconstruir la firma válida sin conocer
+   *    el secreto (timing attack clásico contra HMAC).
+   * 2. FAIL-CLOSED en producción: si MP_WEBHOOK_SECRET no está configurado,
+   *    un despliegue mal configurado NO debe aceptar CUALQUIER webhook sin
+   *    firma verificada — eso permitiría falsificar pagos y activar
+   *    suscripciones gratis. Solo en dev/test (NODE_ENV !== 'production')
+   *    se tolera omitir la validación, con warning explícito.
    */
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
   verifySignature(signature: string, requestId: string, body: any): boolean {
     if (!signature || !requestId || !body) return false;
 
-    // Si no hay secreto configurado (ej: test local), omitimos validación
     const secret = process.env.MP_WEBHOOK_SECRET;
     if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.error(
+          'MP_WEBHOOK_SECRET no configurado en producción. Rechazando webhook (fail-closed).',
+        );
+        return false;
+      }
+
       this.logger.warn(
-        'MP_WEBHOOK_SECRET no configurado. Omitiendo validación (solo usar en dev).',
+        'MP_WEBHOOK_SECRET no configurado. Omitiendo validación (solo dev/test).',
       );
       return true;
     }
@@ -45,12 +63,23 @@ export class BillingService {
       const dataId = body.data?.id;
       const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
 
-      const hmac = crypto
+      const expectedHmac = crypto
         .createHmac('sha256', secret)
         .update(manifest)
         .digest('hex');
 
-      return hmac === v1;
+      // timingSafeEqual exige buffers de igual longitud (o lanza). HMAC-SHA256
+      // siempre produce 64 chars hex, así que un largo distinto ya implica
+      // firma inválida — comparar el largo primero no filtra nada explotable
+      // (no depende del contenido del secreto, solo del header recibido).
+      const expectedBuffer = Buffer.from(expectedHmac, 'hex');
+      const receivedBuffer = Buffer.from(v1, 'hex');
+
+      if (expectedBuffer.length !== receivedBuffer.length) {
+        return false;
+      }
+
+      return crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
     } catch (e) {
       this.logger.error('Error calculando HMAC', e);
       return false;
@@ -92,9 +121,22 @@ export class BillingService {
       const mpSubscriptionId =
         rawPayload.data?.subscription_id || 'test_sub_id';
 
-      // Intentamos encontrar el tenant
+      /**
+       * Lock pesimista del Tenant (auditoría Staff Engineer — A2).
+       *
+       * Sin este lock, dos notificaciones de pago casi simultáneas para la
+       * misma suscripción (MercadoPago reintenta webhooks; también puede
+       * emitir eventos separados como payment.created/payment.updated para
+       * el mismo pago) pueden leer el mismo `subscription_expires_at` antes
+       * de que cualquiera escriba, y cada una suma +30 días desde la MISMA
+       * base — la que commitea última pisa a la otra (lost update): el
+       * comercio pagó dos veces pero solo se acredita una extensión.
+       * Mismo patrón que ya usan transactions.service.ts, customers.service.ts
+       * y cash-register.service.ts para toda mutación de estado compartido.
+       */
       const tenant = await queryRunner.manager.findOne(Tenant, {
         where: { mp_subscription_id: mpSubscriptionId },
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!tenant) {

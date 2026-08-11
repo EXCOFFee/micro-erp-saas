@@ -40,6 +40,7 @@ Tienes que configurar estas variables desde el panel del Web Service en Render:
 | `JWT_RESET_SECRET` | Secreto **dedicado** para los tokens de recuperación de contraseña (15m). **Distinto** de los anteriores. | `Otro string aleatorio distinto` |
 | `FRONTEND_URL` | URL donde vivirá Next.js (para configurar CORS) | `https://micro-erp.vercel.app` (sin / al final) |
 | `CRON_SECRET` | Clave secreta para disparar tareas programadas externas | `Un string seguro` |
+| `MP_WEBHOOK_SECRET` | Secreto para verificar la firma HMAC de los webhooks de pago de MercadoPago. **Si falta en producción, el webhook se rechaza** (fail-closed) — no se aceptan notificaciones de pago sin firma verificada. | El secreto que configuraste en tu cuenta de MercadoPago para ese webhook |
 | `PORT` | *(Opcional)* Puerto expuesto. | `10000` |
 
 > ⚠️ **Tras este cambio de seguridad:** si `JWT_SUMMARY_SECRET` no está configurado en Render, el deploy fallará en el arranque (`getOrThrow`). Configurá la variable **antes** de promover el deploy. Rotar `JWT_SUMMARY_SECRET` invalida los magic links de resumen ya emitidos (comportamiento esperado).

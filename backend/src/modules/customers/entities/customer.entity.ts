@@ -29,6 +29,7 @@ import { Tenant } from '../../tenants/entities/tenant.entity';
 @Index(['tenant_id']) // Aislamiento multi-tenant en todas las queries
 @Index(['tenant_id', 'balance_cents']) // Performance: Dashboard de morosos (CU-DASH-01)
 @Index(['tenant_id', 'is_overdue']) // Performance: Cron Job busca morosos por tenant (HU6)
+@Index(['tenant_id', 'idempotency_key'], { unique: true }) // Auditoría (M6): evita altas duplicadas por reenvío
 export class Customer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -183,6 +184,22 @@ export class Customer {
    */
   @Column({ type: 'text', array: true, nullable: true, default: null })
   tags: string[] | null;
+
+  /**
+   * Clave de idempotencia para evitar altas duplicadas en POST /customers
+   * (Auditoría Staff Engineer — M6).
+   *
+   * Nullable a propósito: clientes creados antes de este cambio (o sin
+   * enviar la key) no tienen valor acá. Postgres trata cada NULL como
+   * distinto dentro de un índice único, así que múltiples clientes con
+   * idempotency_key NULL conviven sin conflicto — no hace falta un índice
+   * parcial pese a la nulabilidad. Mismo patrón conceptual que
+   * `Transaction.idempotency_key`, adaptado a un create de una sola fila
+   * (por eso columna directa, no tabla dedicada como
+   * `IdempotentBatchOperation`, que existe solo para operaciones batch).
+   */
+  @Column({ type: 'uuid', nullable: true, default: null })
+  idempotency_key: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

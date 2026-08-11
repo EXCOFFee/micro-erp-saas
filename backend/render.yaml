@@ -18,3 +18,5 @@ services:
         sync: false
       - key: CRON_SECRET
         sync: false
+      - key: MP_WEBHOOK_SECRET
+        sync: false

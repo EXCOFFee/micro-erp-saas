@@ -52,6 +52,24 @@ export class CustomersService {
    * - Si phone o dni ya existen en el mismo tenant → 409 Conflict
    */
   async create(tenantId: string, dto: CreateCustomerDto): Promise<Customer> {
+    /**
+     * Idempotencia (Auditoría Staff Engineer — M6):
+     * Si viene idempotency_key y ya existe un cliente con esa key para
+     * este tenant, devolvemos el existente en vez de crear un duplicado
+     * (mismo comportamiento que TransactionsService ante una key repetida:
+     * 200 con el registro ya existente, sin excepción). Se chequea ANTES
+     * que phone/dni para no rechazar un reintento legítimo por un
+     * "duplicado" que en realidad es la misma request de nuevo.
+     */
+    if (dto.idempotency_key) {
+      const existing = await this.customerRepository.findOne({
+        where: { tenant_id: tenantId, idempotency_key: dto.idempotency_key },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
     // Verificar duplicados de phone y dni dentro del mismo tenant
     if (dto.phone) {
       const existingPhone = await this.customerRepository.findOne({
@@ -83,6 +101,7 @@ export class CustomersService {
       phone: dto.phone ?? null,
       dni: dto.dni ?? null,
       credit_limit_cents: dto.credit_limit_cents ?? 0,
+      idempotency_key: dto.idempotency_key ?? null,
       // balance_cents: 0 — default de la entidad, NUNCA del frontend
     });
 
